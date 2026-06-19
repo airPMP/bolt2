@@ -1,0 +1,422 @@
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
+export interface Database {
+  public: {
+    Tables: {
+      user_profiles: {
+        Row: {
+          id: string;
+          user_type: 'auditor' | 'developer' | 'buyer';
+          company_name: string | null;
+          phone: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          user_type: 'auditor' | 'developer' | 'buyer';
+          company_name?: string | null;
+          phone?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_type?: 'auditor' | 'developer' | 'buyer';
+          company_name?: string | null;
+          phone?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      projects: {
+        Row: {
+          id: string;
+          project_code: string;
+          name: string;
+          type: string;
+          methodology: string | null;
+          status: string;
+          location: string | null;
+          vintage: number | null;
+          verifier: string | null;
+          developer_id: string | null;
+          total_credits: number;
+          available_credits: number;
+          price_per_credit: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_code: string;
+          name: string;
+          type: string;
+          methodology?: string | null;
+          status?: string;
+          location?: string | null;
+          vintage?: number | null;
+          verifier?: string | null;
+          developer_id?: string | null;
+          total_credits?: number;
+          available_credits?: number;
+          price_per_credit?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_code?: string;
+          name?: string;
+          type?: string;
+          methodology?: string | null;
+          status?: string;
+          location?: string | null;
+          vintage?: number | null;
+          verifier?: string | null;
+          developer_id?: string | null;
+          total_credits?: number;
+          available_credits?: number;
+          price_per_credit?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      assets: {
+        Row: {
+          id: string;
+          project_id: string | null;
+          name: string;
+          asset_type: string;
+          capacity: number | null;
+          location: string | null;
+          city: string | null;
+          commissioned_date: string | null;
+          mac_address: string | null;
+          manufacturer: string | null;
+          model: string | null;
+          current_power: number;
+          lifetime_energy: number;
+          sensor_uptime: number;
+          total_inverters: number;
+          total_meters: number;
+          subscription_expiry: string | null;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id?: string | null;
+          name: string;
+          asset_type: string;
+          capacity?: number | null;
+          location?: string | null;
+          city?: string | null;
+          commissioned_date?: string | null;
+          mac_address?: string | null;
+          manufacturer?: string | null;
+          model?: string | null;
+          current_power?: number;
+          lifetime_energy?: number;
+          sensor_uptime?: number;
+          total_inverters?: number;
+          total_meters?: number;
+          subscription_expiry?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string | null;
+          name?: string;
+          asset_type?: string;
+          capacity?: number | null;
+          location?: string | null;
+          city?: string | null;
+          commissioned_date?: string | null;
+          mac_address?: string | null;
+          manufacturer?: string | null;
+          model?: string | null;
+          current_power?: number;
+          lifetime_energy?: number;
+          sensor_uptime?: number;
+          total_inverters?: number;
+          total_meters?: number;
+          subscription_expiry?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      sensor_data: {
+        Row: {
+          id: number;
+          asset_id: string | null;
+          mac_address: string | null;
+          timestamp: string;
+          frequency: number | null;
+          voltage_phase1: number | null;
+          voltage_phase2: number | null;
+          voltage_phase3: number | null;
+          current_phase1: number | null;
+          current_phase2: number | null;
+          current_phase3: number | null;
+          active_power_phase1: number | null;
+          active_power_phase2: number | null;
+          active_power_phase3: number | null;
+          active_total: number | null;
+          temperature: number | null;
+          humidity: number | null;
+          irradiation: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          asset_id?: string | null;
+          mac_address?: string | null;
+          timestamp: string;
+          frequency?: number | null;
+          voltage_phase1?: number | null;
+          voltage_phase2?: number | null;
+          voltage_phase3?: number | null;
+          current_phase1?: number | null;
+          current_phase2?: number | null;
+          current_phase3?: number | null;
+          active_power_phase1?: number | null;
+          active_power_phase2?: number | null;
+          active_power_phase3?: number | null;
+          active_total?: number | null;
+          temperature?: number | null;
+          humidity?: number | null;
+          irradiation?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          asset_id?: string | null;
+          mac_address?: string | null;
+          timestamp?: string;
+          frequency?: number | null;
+          voltage_phase1?: number | null;
+          voltage_phase2?: number | null;
+          voltage_phase3?: number | null;
+          current_phase1?: number | null;
+          current_phase2?: number | null;
+          current_phase3?: number | null;
+          active_power_phase1?: number | null;
+          active_power_phase2?: number | null;
+          active_power_phase3?: number | null;
+          active_total?: number | null;
+          temperature?: number | null;
+          humidity?: number | null;
+          irradiation?: number | null;
+          created_at?: string;
+        };
+      };
+      carbon_credits: {
+        Row: {
+          id: string;
+          project_id: string | null;
+          asset_id: string | null;
+          credit_amount: number;
+          generation_date: string;
+          status: string;
+          vintage: number;
+          verification_date: string | null;
+          verifier_id: string | null;
+          serial_number: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id?: string | null;
+          asset_id?: string | null;
+          credit_amount: number;
+          generation_date: string;
+          status?: string;
+          vintage: number;
+          verification_date?: string | null;
+          verifier_id?: string | null;
+          serial_number?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string | null;
+          asset_id?: string | null;
+          credit_amount?: number;
+          generation_date?: string;
+          status?: string;
+          vintage?: number;
+          verification_date?: string | null;
+          verifier_id?: string | null;
+          serial_number?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+      };
+      transactions: {
+        Row: {
+          id: string;
+          transaction_type: string;
+          credit_id: string | null;
+          buyer_id: string | null;
+          seller_id: string | null;
+          amount: number;
+          price_per_credit: number | null;
+          total_price: number | null;
+          status: string;
+          payment_method: string | null;
+          payment_reference: string | null;
+          transaction_date: string;
+          completed_at: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          transaction_type: string;
+          credit_id?: string | null;
+          buyer_id?: string | null;
+          seller_id?: string | null;
+          amount: number;
+          price_per_credit?: number | null;
+          total_price?: number | null;
+          status?: string;
+          payment_method?: string | null;
+          payment_reference?: string | null;
+          transaction_date?: string;
+          completed_at?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          transaction_type?: string;
+          credit_id?: string | null;
+          buyer_id?: string | null;
+          seller_id?: string | null;
+          amount?: number;
+          price_per_credit?: number | null;
+          total_price?: number | null;
+          status?: string;
+          payment_method?: string | null;
+          payment_reference?: string | null;
+          transaction_date?: string;
+          completed_at?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+      };
+      wallets: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          available_credits: number;
+          pending_credits: number;
+          retired_credits: number;
+          total_value: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          available_credits?: number;
+          pending_credits?: number;
+          retired_credits?: number;
+          total_value?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          available_credits?: number;
+          pending_credits?: number;
+          retired_credits?: number;
+          total_value?: number;
+          updated_at?: string;
+        };
+      };
+      verifications: {
+        Row: {
+          id: string;
+          project_id: string | null;
+          verifier_id: string | null;
+          verification_type: string;
+          status: string;
+          credits_verified: number | null;
+          verification_date: string | null;
+          report_url: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id?: string | null;
+          verifier_id?: string | null;
+          verification_type: string;
+          status?: string;
+          credits_verified?: number | null;
+          verification_date?: string | null;
+          report_url?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string | null;
+          verifier_id?: string | null;
+          verification_type?: string;
+          status?: string;
+          credits_verified?: number | null;
+          verification_date?: string | null;
+          report_url?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      weather_data: {
+        Row: {
+          id: string;
+          asset_id: string | null;
+          timestamp: string;
+          condition: string | null;
+          temperature: number | null;
+          humidity: number | null;
+          irradiation: number | null;
+          wind_speed: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          asset_id?: string | null;
+          timestamp: string;
+          condition?: string | null;
+          temperature?: number | null;
+          humidity?: number | null;
+          irradiation?: number | null;
+          wind_speed?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          asset_id?: string | null;
+          timestamp?: string;
+          condition?: string | null;
+          temperature?: number | null;
+          humidity?: number | null;
+          irradiation?: number | null;
+          wind_speed?: number | null;
+          created_at?: string;
+        };
+      };
+    };
+  };
+}
