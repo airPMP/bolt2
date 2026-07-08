@@ -857,6 +857,3 @@ export default function ProjectWizard() {
     </div>
   );
 }
-
-
-export default ProjectWizard
