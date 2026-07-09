@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Home, User, Building, Activity, Database, Wallet, Users, Settings, Globe } from 'lucide-react';
+import { Home, User, Building, Database, Wallet, Settings, Globe, Calculator } from 'lucide-react';
 import DeveloperOverview from './DeveloperOverview';
 import DeveloperProfile from './DeveloperProfile';
 import MyAssets from './MyAssets';
 import CarbonDashboard from './CarbonDashboard';
 import MyWallet from './MyWallet';
 import ProjectWizard from './ProjectWizard';
+import GHGCalculator from './GHGCalculator';
 
 export default function DeveloperDashboard() {
   const [activeNav, setActiveNav] = useState('overview');
@@ -15,6 +16,7 @@ export default function DeveloperDashboard() {
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'assets', label: 'My Assets', icon: Building },
     { id: 'carbon', label: 'Carbon Dashboard', icon: Database },
+    { id: 'ghg', label: 'GHG Calculator', icon: Calculator },
     { id: 'wallet', label: 'My Wallet', icon: Wallet },
     { id: 'wizard', label: 'Project Wizard', icon: Globe },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -30,6 +32,8 @@ export default function DeveloperDashboard() {
         return <MyAssets />;
       case 'carbon':
         return <CarbonDashboard />;
+      case 'ghg':
+        return <GHGCalculator />;
       case 'wallet':
         return <MyWallet />;
       case 'wizard':
