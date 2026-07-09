@@ -128,7 +128,7 @@ export default function ProjectWizard() {
   const [selectedRegistryId, setSelectedRegistryId] = useState('');
   const [selectedMethodology, setSelectedMethodology] = useState('');
   const [useDefault, setUseDefault] = useState(false);
-  const [showBOQ, setShowBOQ] = useState(false);
+  const [_showBOQ, setShowBOQ] = useState(false);
   const [landData, setLandData] = useState<LandData | null>(null);
   const [ownershipValidated, setOwnershipValidated] = useState(false);
   const [ownershipMethod, setOwnershipMethod] = useState('');
