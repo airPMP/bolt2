@@ -263,6 +263,24 @@ export default function DMRVCalculator() {
         ? netEmissions / activeProfile.currentProductOutput
         : 0;
 
+    // Total energy consumed = grid electricity + pumping energy + WHR (recovered)
+    // Kept separate from carbon so energy and carbon ledgers are independent.
+    const totalEnergyConsumedKwh =
+      t.gridElectricityKwh + club1PumpingEnergyKwh;
+    const totalEnergyRecoveredKwh = t.wasteHeatRecoveryKwh;
+    const netEnergyKwh = totalEnergyConsumedKwh - totalEnergyRecoveredKwh;
+
+    // Embedded carbon per gram of product (tCO2e/tonne → kgCO2e/kg → gCO2e/g)
+    // 1 tCO2e/tonne = 1 kgCO2e/kg = 1 gCO2e/g, so GEI value maps directly.
+    const embeddedCarbonPerGram = calculatedGEI; // gCO2e per gram of product
+    const embeddedCarbonPerKg = calculatedGEI; // kgCO2e per kg of product
+
+    // Energy intensity per gram of product (kWh/tonne → Wh/kg → mWh/g)
+    const energyIntensityPerGram =
+      activeProfile.currentProductOutput > 0
+        ? (netEnergyKwh / activeProfile.currentProductOutput) * 1000 // Wh/kg
+        : 0;
+
     const geiReductionPercentage =
       activeProfile.annualBaselineGEI !== 0
         ? ((activeProfile.annualBaselineGEI - calculatedGEI) /
@@ -301,6 +319,18 @@ export default function DMRVCalculator() {
       club6: {
         avoidedEmissions: club6AvoidedEmissions,
         tokens: club6TokensMinted,
+      },
+      energyLedger: {
+        totalEnergyConsumedKwh,
+        totalEnergyRecoveredKwh,
+        netEnergyKwh,
+        energyIntensityWhPerKg: energyIntensityPerGram,
+      },
+      embeddedCarbon: {
+        perGram: embeddedCarbonPerGram,
+        perKg: embeddedCarbonPerKg,
+        perTonne: calculatedGEI,
+        unit: 'gCO2e/g (equivalently kgCO2e/kg or tCO2e/tonne)',
       },
       aggregates: {
         totalBlackLiability,
@@ -391,12 +421,35 @@ export default function DMRVCalculator() {
         netBatchCarbonBalanceTCO2e: computationResults.aggregates.netEmissions,
         regulatoryComplianceStatus:
           computationResults.aggregates.complianceStatus,
+        energyLedger: {
+          totalEnergyConsumedKwh:
+            computationResults.energyLedger.totalEnergyConsumedKwh,
+          totalEnergyRecoveredKwh:
+            computationResults.energyLedger.totalEnergyRecoveredKwh,
+          netEnergyKwh: computationResults.energyLedger.netEnergyKwh,
+          energyIntensityWhPerKg:
+            computationResults.energyLedger.energyIntensityWhPerKg,
+        },
+        embeddedCarbonPerGramOfProduct:
+          computationResults.embeddedCarbon.perGram,
+        embeddedCarbonPerKgOfProduct:
+          computationResults.embeddedCarbon.perKg,
+        embeddedCarbonUnit:
+          computationResults.embeddedCarbon.unit,
         icmPortalFormA_AutofillPayload: {
           field_104_gross_emissions:
             computationResults.aggregates.totalBlackLiability,
           field_105_credited_mitigation:
             computationResults.aggregates.totalGreenCredits,
           field_106_net_gei_score: computationResults.aggregates.calculatedGEI,
+          field_107_total_energy_consumed_kwh:
+            computationResults.energyLedger.totalEnergyConsumedKwh,
+          field_108_energy_recovered_kwh:
+            computationResults.energyLedger.totalEnergyRecoveredKwh,
+          field_109_embedded_carbon_per_gram:
+            computationResults.embeddedCarbon.perGram,
+          field_110_energy_intensity_wh_per_kg:
+            computationResults.energyLedger.energyIntensityWhPerKg,
         },
       },
     };
@@ -818,6 +871,55 @@ export default function DMRVCalculator() {
             <span className="text-[9px] font-mono text-slate-500 mt-2 text-center block w-full">
               Form A Autofill State Standardized
             </span>
+          </div>
+        </section>
+
+        {/* Energy & Embedded Carbon Ledger — kept separate from carbon tokens */}
+        <section className="mb-8 bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-4 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-yellow-500" />
+            Energy & Embedded Carbon Ledger (Independent from Token Ledger)
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
+              <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">Total Energy Consumed</span>
+              <span className="text-xl font-black text-yellow-500 font-mono">
+                {computationResults.energyLedger.totalEnergyConsumedKwh.toLocaleString()}
+              </span>
+              <span className="text-xs text-slate-500 font-mono block mt-1">kWh (Grid + Pumping)</span>
+            </div>
+            <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
+              <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">Energy Recovered (WHR)</span>
+              <span className="text-xl font-black text-emerald-400 font-mono">
+                {computationResults.energyLedger.totalEnergyRecoveredKwh.toLocaleString()}
+              </span>
+              <span className="text-xs text-slate-500 font-mono block mt-1">kWh</span>
+            </div>
+            <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
+              <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">Net Energy Intensity</span>
+              <span className="text-xl font-black text-blue-400 font-mono">
+                {computationResults.energyLedger.energyIntensityWhPerKg.toFixed(4)}
+              </span>
+              <span className="text-xs text-slate-500 font-mono block mt-1">Wh/kg of product</span>
+            </div>
+            <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
+              <span className="text-[10px] font-mono text-slate-500 uppercase block mb-1">Embedded Carbon per Gram</span>
+              <span className="text-xl font-black text-red-400 font-mono">
+                {computationResults.embeddedCarbon.perGram.toFixed(6)}
+              </span>
+              <span className="text-xs text-slate-500 font-mono block mt-1">gCO₂e / gram of product</span>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800/60 font-mono text-xs">
+              <div className="flex justify-between"><span className="text-slate-500">Embedded per kg:</span> <span className="text-slate-300">{computationResults.embeddedCarbon.perKg.toFixed(5)} kgCO₂e/kg</span></div>
+              <div className="flex justify-between mt-1"><span className="text-slate-500">Embedded per tonne:</span> <span className="text-slate-300">{computationResults.embeddedCarbon.perTonne.toFixed(5)} tCO₂e/tonne</span></div>
+              <div className="flex justify-between mt-1"><span className="text-slate-500">Net energy (kWh):</span> <span className="text-slate-300">{computationResults.energyLedger.netEnergyKwh.toLocaleString()} kWh</span></div>
+            </div>
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800/60 font-mono text-[11px] text-slate-500">
+              <span className="text-slate-400 font-semibold block mb-1">Ledger Separation Note</span>
+              Energy and carbon are tracked independently. Black tokens (1 tCO₂e = 1 token) and green tokens (1 tCO₂e removed/avoided = 1 token) are minted separately. Energy intensity (Wh/kg) and embedded carbon (gCO₂e/g) are reported as independent metrics per gram of product.
+            </div>
           </div>
         </section>
 
