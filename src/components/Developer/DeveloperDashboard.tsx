@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, User, Building, Database, Wallet, Settings, Globe, Calculator, Server } from 'lucide-react';
+import { Home, User, Building, Database, Wallet, Settings, Globe, Calculator, Server, Gauge, FileCheck } from 'lucide-react';
 import DeveloperOverview from './DeveloperOverview';
 import DeveloperProfile from './DeveloperProfile';
 import MyAssets from './MyAssets';
@@ -8,6 +8,8 @@ import MyWallet from './MyWallet';
 import ProjectWizard from './ProjectWizard';
 import GHGCalculator from './GHGCalculator';
 import BlockVoltWorkerNode from './BlockVoltWorkerNode';
+import DMRVCalculator from './DMRVCalculator';
+import RECRegistryNavigator from './RECRegistryNavigator';
 
 export default function DeveloperDashboard() {
   const [activeNav, setActiveNav] = useState('overview');
@@ -18,6 +20,8 @@ export default function DeveloperDashboard() {
     { id: 'assets', label: 'My Assets', icon: Building },
     { id: 'carbon', label: 'Carbon Dashboard', icon: Database },
     { id: 'ghg', label: 'GHG Calculator', icon: Calculator },
+    { id: 'dmrv', label: 'dMRV Edge Calculator', icon: Gauge },
+    { id: 'rec', label: 'REC Form Filler', icon: FileCheck },
     { id: 'worker', label: 'CIVV Worker Node', icon: Server },
     { id: 'wallet', label: 'My Wallet', icon: Wallet },
     { id: 'wizard', label: 'Project Wizard', icon: Globe },
@@ -36,6 +40,10 @@ export default function DeveloperDashboard() {
         return <CarbonDashboard />;
       case 'ghg':
         return <GHGCalculator />;
+      case 'dmrv':
+        return <DMRVCalculator />;
+      case 'rec':
+        return <RECRegistryNavigator />;
       case 'worker':
         return <BlockVoltWorkerNode />;
       case 'wallet':
