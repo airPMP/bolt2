@@ -79,6 +79,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
+        // signUp may return a session immediately (email confirmation off).
+        // If not, sign in to establish one so RLS ownership checks pass.
+        let session = data.session;
+        if (!session) {
+          const { data: signInData, error: signInError } =
+            await supabase.auth.signInWithPassword({ email, password });
+          if (signInError) throw signInError;
+          session = signInData.session;
+        }
+
         const { error: profileError } = await supabase
           .from('user_profiles')
           .insert({
