@@ -14,6 +14,14 @@ import {
   TrendingDown,
   RefreshCw,
 } from 'lucide-react';
+import {
+  defraCalc,
+  ashraeCalc,
+  recCalc,
+  nbsArrCalc,
+  biocharCalc,
+  cookstoveCalc,
+} from '../../lib/calculator';
 
 export type ClubId =
   | 'CLUB1_DEFRA'
@@ -223,34 +231,76 @@ export default function DMRVCalculator() {
   const computationResults = useMemo(() => {
     const t = activeProfile.telemetry;
 
-    const club1PumpingEnergyKwh =
-      t.evaporativeWaterLossM3 * t.pumpingEfficiencyKwhM3;
-    const club1EmissionsTons = club1PumpingEnergyKwh * t.gridEmissionFactor;
-    const club1TokensMinted = Math.floor(club1EmissionsTons);
+    // ── Club 1: Black Token — Defra evaporative pumping ──
+    // CO2 = V_evap × EC_pump × EF_grid
+    const club1Result = defraCalc(activeProfile.id, {
+      V_evap_m3: t.evaporativeWaterLossM3,
+      EC_pump: t.pumpingEfficiencyKwhM3,
+      EF_grid_tco2_per_kwh: t.gridEmissionFactor,
+    });
+    const club1PumpingEnergyKwh = club1Result.pumpingEnergy_kwh;
+    const club1EmissionsTons = club1Result.emissions_tco2e;
+    const club1TokensMinted = club1Result.blackTokensMinted;
 
-    const club2GridEmissions = t.gridElectricityKwh * t.gridEmissionFactor;
-    const club2RefrigerantEmissions =
-      (t.refrigerantLeakageKg / 1000) * t.refrigerantGwp;
-    const club2TotalGrossEmissions =
-      club2GridEmissions + club2RefrigerantEmissions;
-    const club2TokensMinted = Math.floor(club2TotalGrossEmissions);
+    // ── Club 2: Black Token — ASHRAE 228 net-zero ──
+    // Net GHG = Σ(E_import × EF) – Σ(E_export × EF) + Σ(L_ref × GWP)
+    const club2Result = ashraeCalc(activeProfile.id, {
+      E_import_kwh: t.gridElectricityKwh,
+      EF_import: t.gridEmissionFactor,
+      E_export_kwh: t.wasteHeatRecoveryKwh,
+      EF_export: t.gridEmissionFactor,
+      refrigerant_charge_kg: t.refrigerantLeakageKg,
+      leak_rate_pct: 10,
+      GWP_refrigerant: t.refrigerantGwp,
+    });
+    const club2GridEmissions = club2Result.imported_emissions_tco2e;
+    const club2RefrigerantEmissions = club2Result.refrigerant_leakage_tco2e;
+    const club2TotalGrossEmissions = club2Result.net_emissions_tco2e;
+    const club2TokensMinted = club2Result.blackTokensMinted;
 
-    const club3AvoidedEmissions =
-      t.wasteHeatRecoveryKwh * t.gridEmissionFactor;
-    const club3TokensMinted = Math.floor(club3AvoidedEmissions * 10) / 10;
+    // ── Club 3: Green Token — RE+Energy (REC) ──
+    // REC = MWh_generated × EF_grid
+    const club3Result = recCalc(activeProfile.id, {
+      MWh_generated: t.wasteHeatRecoveryKwh / 1000,
+      EF_grid_tco2_per_mwh: 0.82,
+    });
+    const club3AvoidedEmissions = club3Result.avoided_tco2e;
+    const club3TokensMinted = club3Result.RECs_issued;
 
-    const club4SequestrationTons =
-      activeProfile.currentProductOutput * 0.002;
+    // ── Club 4: Green Token — NbS ARR (Verra VM0047) ──
+    // ARR: ΔC = f(DBH, H, species) × 44/12
+    const club4Trees = [
+      { dbh_cm: 25.4, height_m: 12.2, species: 'Tectona grandis' },
+      { dbh_cm: 18.7, height_m: 9.8, species: 'Acacia nilotica' },
+    ];
+    const club4Result = nbsArrCalc(activeProfile.id, club4Trees);
+    const club4SequestrationTons = club4Result.tco2e_sequestered;
     const club4TokensMinted = Math.floor(club4SequestrationTons * 100) / 100;
 
-    const club5AvoidedEmissions = t.offsetBiocharTons * 2.85;
+    // ── Club 5: Green Token — Biochar CDR (Isometric v1.2) ──
+    // CDR = M_biochar × fC_fixed × 44/12 – E_proc
+    const club5Result = biocharCalc(activeProfile.id, {
+      biocharMass: t.offsetBiocharTons * 1000,
+      fixedCarbonPct: 78.4,
+      moisturePct: 8.5,
+      parasiticEnergy: 42500,
+      transportDistance: 150,
+      permanenceFactor: 0.915,
+    });
+    const club5AvoidedEmissions = club5Result.permanenceAdjusted_tco2e;
     const club5TokensMinted = Math.floor(club5AvoidedEmissions);
 
-    const club6AvoidedEmissions = activeProfile.currentProductOutput * 0.005;
+    // ── Club 6: Green Token — Cookstoves (TPDDTEC) ──
+    // ER = B_fuel_saved × EF_fuel – leakage
+    const club6Result = cookstoveCalc(activeProfile.id, {
+      B_fuel_saved: activeProfile.currentProductOutput * 0.05,
+      EF_fuel: 1.89,
+      leakage: 0.05,
+    });
+    const club6AvoidedEmissions = club6Result.emissionReductions_tco2e;
     const club6TokensMinted = Math.floor(club6AvoidedEmissions);
 
-    const totalBlackLiability =
-      club1EmissionsTons + club2TotalGrossEmissions;
+    const totalBlackLiability = club1EmissionsTons + club2TotalGrossEmissions;
     const totalGreenCredits =
       club3AvoidedEmissions +
       club4SequestrationTons +
@@ -263,22 +313,16 @@ export default function DMRVCalculator() {
         ? netEmissions / activeProfile.currentProductOutput
         : 0;
 
-    // Total energy consumed = grid electricity + pumping energy + WHR (recovered)
-    // Kept separate from carbon so energy and carbon ledgers are independent.
-    const totalEnergyConsumedKwh =
-      t.gridElectricityKwh + club1PumpingEnergyKwh;
+    const totalEnergyConsumedKwh = t.gridElectricityKwh + club1PumpingEnergyKwh;
     const totalEnergyRecoveredKwh = t.wasteHeatRecoveryKwh;
     const netEnergyKwh = totalEnergyConsumedKwh - totalEnergyRecoveredKwh;
 
-    // Embedded carbon per gram of product (tCO2e/tonne → kgCO2e/kg → gCO2e/g)
-    // 1 tCO2e/tonne = 1 kgCO2e/kg = 1 gCO2e/g, so GEI value maps directly.
-    const embeddedCarbonPerGram = calculatedGEI; // gCO2e per gram of product
-    const embeddedCarbonPerKg = calculatedGEI; // kgCO2e per kg of product
+    const embeddedCarbonPerGram = calculatedGEI;
+    const embeddedCarbonPerKg = calculatedGEI;
 
-    // Energy intensity per gram of product (kWh/tonne → Wh/kg → mWh/g)
     const energyIntensityPerGram =
       activeProfile.currentProductOutput > 0
-        ? (netEnergyKwh / activeProfile.currentProductOutput) * 1000 // Wh/kg
+        ? (netEnergyKwh / activeProfile.currentProductOutput) * 1000
         : 0;
 
     const geiReductionPercentage =

@@ -188,3 +188,22 @@ export async function fetchIEXMarket(instrument: 'rec' | 'ccc' = 'rec'): Promise
 }
 
 export { supabase };
+
+// ── dMRV Calculator API ──
+export async function calculateViaAPI(params: {
+  club: 'black' | 'green';
+  subType: string;
+  plantId: string;
+  sensorData: Record<string, unknown>;
+}): Promise<Record<string, unknown>> {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/calculate`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Calculate request failed (${res.status})`);
+  }
+  return res.json();
+}

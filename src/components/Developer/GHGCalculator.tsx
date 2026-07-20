@@ -11,10 +11,14 @@ import {
   Download,
   RefreshCw,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Shield,
+  Building,
+  Zap,
 } from 'lucide-react';
+import { defraCalc, ashraeCalc, recCalc, nbsArrCalc } from '../../lib/calculator';
 
-type CalculationTab = 'corsia' | 'cbam' | 'biochar' | 'pnl' | 'methodology';
+type CalculationTab = 'black_defra' | 'black_ashrae' | 'green_re' | 'green_nbs' | 'corsia' | 'cbam' | 'biochar' | 'pnl' | 'methodology';
 
 interface CORSIAInputs {
   safProduction: number;
@@ -134,16 +138,95 @@ const defaultPnL: PnLInputs = {
   usdInrRate: 83
 };
 
+interface DefraInputs {
+  V_evap_m3: number;
+  EC_pump: number;
+  EF_grid_tco2_per_kwh: number;
+}
+
+interface AshraeInputs {
+  E_import_kwh: number;
+  EF_import: number;
+  E_export_kwh: number;
+  EF_export: number;
+  refrigerant_charge_kg: number;
+  leak_rate_pct: number;
+  GWP_refrigerant: number;
+}
+
+interface REInputs {
+  MWh_generated: number;
+  EF_grid_tco2_per_mwh: number;
+}
+
+interface NbsInputs {
+  treeCount: number;
+  avgDbh: number;
+  avgHeight: number;
+}
+
+const defaultDefra: DefraInputs = {
+  V_evap_m3: 2100,
+  EC_pump: 1.635,
+  EF_grid_tco2_per_kwh: 0.00058,
+};
+
+const defaultAshrae: AshraeInputs = {
+  E_import_kwh: 850000,
+  EF_import: 0.00058,
+  E_export_kwh: 120000,
+  EF_export: 0.00058,
+  refrigerant_charge_kg: 8.5,
+  leak_rate_pct: 10,
+  GWP_refrigerant: 2088,
+};
+
+const defaultRE: REInputs = {
+  MWh_generated: 4500,
+  EF_grid_tco2_per_mwh: 0.82,
+};
+
+const defaultNbs: NbsInputs = {
+  treeCount: 500,
+  avgDbh: 25.4,
+  avgHeight: 12.2,
+};
+
 export default function GHGCalculator() {
-  const [activeTab, setActiveTab] = useState<CalculationTab>('corsia');
+  const [activeTab, setActiveTab] = useState<CalculationTab>('black_defra');
   const [corsiaInputs, setCORSIAInputs] = useState<CORSIAInputs>(defaultCORSIA);
   const [cbamInputs, setCBAMInputs] = useState<CBAMInputs>(defaultCBAM);
   const [biocharInputs, setBiocharInputs] = useState<BiocharInputs>(defaultBiochar);
   const [pnlInputs, setPnLInputs] = useState<PnLInputs>(defaultPnL);
+  const [defraInputs, setDefraInputs] = useState<DefraInputs>(defaultDefra);
+  const [ashraeInputs, setAshraeInputs] = useState<AshraeInputs>(defaultAshrae);
+  const [reInputs, setReInputs] = useState<REInputs>(defaultRE);
+  const [nbsInputs, setNbsInputs] = useState<NbsInputs>(defaultNbs);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     assumptions: true,
     methodology: true
   });
+
+  const defraResults = useMemo(() => {
+    return defraCalc('PLANT_TEST', defraInputs);
+  }, [defraInputs]);
+
+  const ashraeResults = useMemo(() => {
+    return ashraeCalc('PLANT_TEST', ashraeInputs);
+  }, [ashraeInputs]);
+
+  const reResults = useMemo(() => {
+    return recCalc('PLANT_TEST', reInputs);
+  }, [reInputs]);
+
+  const nbsResults = useMemo(() => {
+    const trees = Array.from({ length: nbsInputs.treeCount }, () => ({
+      dbh_cm: nbsInputs.avgDbh,
+      height_m: nbsInputs.avgHeight,
+      species: 'Mixed tropical',
+    }));
+    return nbsArrCalc('PLANT_TEST', trees);
+  }, [nbsInputs]);
 
   const corsiaResults = useMemo(() => {
     const totalEnergy = corsiaInputs.safProduction * 1000 * corsiaInputs.safEnergyContent;
@@ -371,6 +454,10 @@ export default function GHGCalculator() {
   );
 
   const tabs = [
+    { id: 'black_defra' as const, label: 'Black: Defra', icon: Shield },
+    { id: 'black_ashrae' as const, label: 'Black: ASHRAE 228', icon: Building },
+    { id: 'green_re' as const, label: 'Green: RE/REC', icon: Zap },
+    { id: 'green_nbs' as const, label: 'Green: NbS ARR', icon: Leaf },
     { id: 'corsia' as const, label: 'CORSIA SAF', icon: Plane },
     { id: 'cbam' as const, label: 'CBAM/DRI', icon: Factory },
     { id: 'biochar' as const, label: 'Biochar CDR', icon: Leaf },
@@ -437,6 +524,182 @@ export default function GHGCalculator() {
         </div>
 
         <div className="p-6">
+          {activeTab === 'black_defra' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-slate-100 to-gray-200 border border-slate-300 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-slate-700 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-slate-900">Black Token — Defra Evaporative Pumping</h3>
+                    <p className="text-sm text-slate-700 mt-1">CO₂ = V_evap × EC_pump × EF_grid — Industrial cooling tower emission liability for GEI compliance.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Sensor Inputs</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField label="Evaporative Water Loss" value={defraInputs.V_evap_m3} onChange={(v) => setDefraInputs(prev => ({ ...prev, V_evap_m3: v }))} unit="m³/epoch" tooltip="Ultrasonic level sensor reading" />
+                    <InputField label="Pump Energy Consumption" value={defraInputs.EC_pump} onChange={(v) => setDefraInputs(prev => ({ ...prev, EC_pump: v }))} unit="kWh/m³" step={0.01} tooltip="Flow meter + kWh meter" />
+                    <InputField label="Grid Emission Factor" value={defraInputs.EF_grid_tco2_per_kwh} onChange={(v) => setDefraInputs(prev => ({ ...prev, EF_grid_tco2_per_kwh: v }))} unit="tCO₂e/kWh" step={0.0001} tooltip="India grid default: 0.00058" />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Results</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <ResultCard label="Pumping Energy" value={defraResults.pumpingEnergy_kwh.toFixed(2)} unit="kWh" />
+                    <ResultCard label="Emissions" value={defraResults.emissions_tco2e.toFixed(6)} unit="tCO₂e" trend="up" />
+                    <ResultCard label="Black Tokens Minted" value={String(defraResults.blackTokensMinted)} unit="CCC" highlight trend="up" />
+                    <ResultCard label="Cumulative Unminted" value={defraResults.cumulativeUnminted.toFixed(6)} unit="tCO₂e" />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-semibold text-gray-700">Defra Formula</h4>
+                </div>
+                <div className="p-3 bg-white rounded-lg font-mono text-sm">
+                  CO₂ = V_evap × EC_pump × EF_grid &nbsp;→&nbsp; {defraInputs.V_evap_m3} × {defraInputs.EC_pump} × {defraInputs.EF_grid_tco2_per_kwh} = {defraResults.emissions_tco2e.toFixed(6)} tCO₂e
+                </div>
+                <div className="mt-2 text-xs text-gray-500">Methodology: {defraResults.methodology} · Registry: {defraResults.registry}</div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'black_ashrae' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-slate-100 to-gray-200 border border-slate-300 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <Building className="w-5 h-5 text-slate-700 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-slate-900">Black Token — ASHRAE 228 Net-Zero Carbon</h3>
+                    <p className="text-sm text-slate-700 mt-1">Net GHG = Σ(E_import × EF) – Σ(E_export × EF) + Σ(L_ref × GWP) — Building/auxiliary emission liability.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Sensor Inputs</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField label="Imported Electricity" value={ashraeInputs.E_import_kwh} onChange={(v) => setAshraeInputs(prev => ({ ...prev, E_import_kwh: v }))} unit="kWh" tooltip="Grid import meter" />
+                    <InputField label="Import EF" value={ashraeInputs.EF_import} onChange={(v) => setAshraeInputs(prev => ({ ...prev, EF_import: v }))} unit="tCO₂e/kWh" step={0.0001} />
+                    <InputField label="Exported Electricity" value={ashraeInputs.E_export_kwh} onChange={(v) => setAshraeInputs(prev => ({ ...prev, E_export_kwh: v }))} unit="kWh" tooltip="WHR/export meter" />
+                    <InputField label="Export EF" value={ashraeInputs.EF_export} onChange={(v) => setAshraeInputs(prev => ({ ...prev, EF_export: v }))} unit="tCO₂e/kWh" step={0.0001} />
+                    <InputField label="Refrigerant Charge" value={ashraeInputs.refrigerant_charge_kg} onChange={(v) => setAshraeInputs(prev => ({ ...prev, refrigerant_charge_kg: v }))} unit="kg" step={0.1} tooltip="Pressure sensor reading" />
+                    <InputField label="Leak Rate" value={ashraeInputs.leak_rate_pct} onChange={(v) => setAshraeInputs(prev => ({ ...prev, leak_rate_pct: v }))} unit="%" step={0.5} />
+                    <InputField label="Refrigerant GWP" value={ashraeInputs.GWP_refrigerant} onChange={(v) => setAshraeInputs(prev => ({ ...prev, GWP_refrigerant: v }))} unit="CO₂e/kg" step={1} tooltip="R-410A default: 2088" />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Results</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <ResultCard label="Imported Emissions" value={ashraeResults.imported_emissions_tco2e.toFixed(6)} unit="tCO₂e" trend="up" />
+                    <ResultCard label="Exported Credit" value={ashraeResults.exported_credit_tco2e.toFixed(6)} unit="tCO₂e" trend="down" />
+                    <ResultCard label="Refrigerant Leakage" value={ashraeResults.refrigerant_leakage_tco2e.toFixed(6)} unit="tCO₂e" trend="up" />
+                    <ResultCard label="Net Emissions" value={ashraeResults.net_emissions_tco2e.toFixed(6)} unit="tCO₂e" highlight trend="up" />
+                    <ResultCard label="Black Tokens Minted" value={String(ashraeResults.blackTokensMinted)} unit="CCC" highlight trend="up" />
+                    <ResultCard label="Cumulative Unminted" value={ashraeResults.cumulativeUnminted.toFixed(6)} unit="tCO₂e" />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-semibold text-gray-700">ASHRAE 228 Formula</h4>
+                </div>
+                <div className="p-3 bg-white rounded-lg font-mono text-sm">
+                  Net GHG = (E_import × EF_import) – (E_export × EF_export) + (charge × leak% × GWP / 1000)
+                </div>
+                <div className="mt-2 text-xs text-gray-500">Methodology: {ashraeResults.methodology} · Registry: {ashraeResults.registry}</div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'green_re' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-emerald-50 to-green-100 border border-emerald-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <Zap className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-emerald-900">Green Token — Renewable Energy (REC)</h3>
+                    <p className="text-sm text-emerald-700 mt-1">REC = MWh_generated × EF_grid — 1 REC per MWh of renewable generation (ACM0002 / A6.4-MEP014-A03).</p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Sensor Inputs</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField label="MWh Generated" value={reInputs.MWh_generated} onChange={(v) => setReInputs(prev => ({ ...prev, MWh_generated: v }))} unit="MWh" tooltip="Inverter kWh meter / 1000" />
+                    <InputField label="Grid Emission Factor" value={reInputs.EF_grid_tco2_per_mwh} onChange={(v) => setReInputs(prev => ({ ...prev, EF_grid_tco2_per_mwh: v }))} unit="tCO₂e/MWh" step={0.01} tooltip="India grid: 0.82" />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Results</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <ResultCard label="RECs Issued" value={String(reResults.RECs_issued)} unit="REC" highlight trend="up" />
+                    <ResultCard label="Avoided Emissions" value={reResults.avoided_tco2e.toFixed(6)} unit="tCO₂e" highlight trend="down" />
+                    <ResultCard label="MWh Generated" value={reResults.MWh_generated.toFixed(2)} unit="MWh" />
+                    <ResultCard label="EnergyTag Ready" value={reResults.energyTag ? 'Yes' : 'No'} unit="" />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-semibold text-gray-700">REC Formula</h4>
+                </div>
+                <div className="p-3 bg-white rounded-lg font-mono text-sm">
+                  RECs = floor(MWh_generated) &nbsp;→&nbsp; {reResults.RECs_issued} REC · Avoided = RECs × EF_grid = {reResults.avoided_tco2e.toFixed(6)} tCO₂e
+                </div>
+                <div className="mt-2 text-xs text-gray-500">Methodology: {reResults.methodology} · Registry: {reResults.registry}</div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'green_nbs' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-emerald-50 to-green-100 border border-emerald-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <Leaf className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-emerald-900">Green Token — NbS ARR (Verra VM0047)</h3>
+                    <p className="text-sm text-emerald-700 mt-1">ARR: ΔC = f(DBH, H, species) × 44/12 — Afforestation/reforestation carbon sequestration via Chave et al. allometric equation.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Sensor Inputs</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField label="Tree Count" value={nbsInputs.treeCount} onChange={(v) => setNbsInputs(prev => ({ ...prev, treeCount: v }))} unit="trees" tooltip="Dendrometer count" />
+                    <InputField label="Avg DBH" value={nbsInputs.avgDbh} onChange={(v) => setNbsInputs(prev => ({ ...prev, avgDbh: v }))} unit="cm" step={0.1} tooltip="Diameter at breast height" />
+                    <InputField label="Avg Height" value={nbsInputs.avgHeight} onChange={(v) => setNbsInputs(prev => ({ ...prev, avgHeight: v }))} unit="m" step={0.1} tooltip="Tree height" />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Results</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <ResultCard label="Total Biomass" value={nbsResults.total_biomass_t.toFixed(6)} unit="t biomass" />
+                    <ResultCard label="CO₂e Sequestered" value={nbsResults.tco2e_sequestered.toFixed(6)} unit="tCO₂e" highlight trend="down" />
+                    <ResultCard label="Tree Count" value={String(nbsResults.tree_count)} unit="trees" />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-semibold text-gray-700">VM0047 ARR Formula (Chave et al.)</h4>
+                </div>
+                <div className="p-3 bg-white rounded-lg font-mono text-sm">
+                  AGB = 0.0673 × DBH^2.528 &nbsp;→&nbsp; C = biomass × 0.47 &nbsp;→&nbsp; CO₂e = C × 44/12
+                </div>
+                <div className="mt-2 text-xs text-gray-500">Methodology: {nbsResults.methodology} · Registry: {nbsResults.registry}</div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'corsia' && (
             <div className="space-y-6">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
