@@ -1,4 +1,4 @@
-import { CheckCircle, XCircle, Loader2, Clock } from 'lucide-react';
+import { CircleCheck as CheckCircle, Circle as XCircle, Loader as Loader2, Clock } from 'lucide-react';
 import type { AuthStamp } from '../../types';
 
 interface AuthBadgeProps {

@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Building2, Send, Coins, TrendingUp, Loader2, CheckCircle,
-  AlertCircle, Wifi, Fingerprint, Zap, Clock, Database
-} from 'lucide-react';
+import { Building2, Send, Coins, TrendingUp, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Wifi, FingerprintPattern as Fingerprint, Zap, Clock, Database } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { REGISTRIES } from '../../data/registries';

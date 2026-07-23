@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Leaf, CheckCircle, ShoppingCart, Building2 } from 'lucide-react';
+import { Leaf, CircleCheck as CheckCircle, ShoppingCart, Building2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {

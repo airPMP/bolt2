@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  ShieldCheck, Server, Lock, Cpu, FileCheck, CheckCircle, Loader2,
-  AlertCircle, ChevronRight, Send, Fingerprint, Wifi
-} from 'lucide-react';
+import { ShieldCheck, Server, Lock, Cpu, FileCheck, CircleCheck as CheckCircle, Loader as Loader2, CircleAlert as AlertCircle, ChevronRight, Send, FingerprintPattern as Fingerprint, Wifi } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { INDUSTRIES } from '../../data/industries';
