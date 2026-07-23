@@ -55,7 +55,7 @@ export default function CarbonDashboard() {
           schema: 'public',
           table: 'sensor_data',
         },
-        (payload) => {
+        (payload: any) => {
           setSensorData((current) => [payload.new as SensorData, ...current].slice(0, 20));
         }
       )

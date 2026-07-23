@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Sun,
   Wind,
@@ -14,11 +14,11 @@ import {
   Lock,
   FileJson,
   CheckCircle,
-  AlertTriangle,
+  AlertTriangle as _AlertTriangle,
   Zap,
-  Thermometer,
-  Gauge,
-  Radio,
+  Thermometer as _Thermometer,
+  Gauge as _Gauge,
+  Radio as _Radio,
   MapPin,
   Clock,
   RefreshCw,
@@ -432,7 +432,7 @@ export default function BlockVoltWorkerNode() {
     setCycleCount(prev => prev + 1);
 
     // Update registry submissions
-    config.registries.forEach((registry, idx) => {
+    config.registries.forEach((registry, _idx) => {
       setSubmissionQueue(prev => {
         const existing = prev.find(s => s.registry === registry);
         if (existing) {

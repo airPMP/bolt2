@@ -47,9 +47,9 @@ export default function DeveloperOverview() {
           .maybeSingle(),
       ]);
 
-      const totalCredits = creditsResult.data?.reduce((sum, c) => sum + (c.credit_amount || 0), 0) || 0;
+      const totalCredits = creditsResult.data?.reduce((sum: number, c: any) => sum + (c.credit_amount || 0), 0) || 0;
       const activeAssets = assetsResult.count || 0;
-      const avgUptime = assetsResult.data?.reduce((sum, a) => sum + (a.sensor_uptime || 0), 0) / (assetsResult.data?.length || 1);
+      const avgUptime = assetsResult.data?.reduce((sum: number, a: any) => sum + (a.sensor_uptime || 0), 0) / (assetsResult.data?.length || 1);
 
       setStats({
         totalCredits: Math.round(totalCredits),
