@@ -2,74 +2,62 @@ export interface Registry {
   id: string;
   name: string;
   type: 'compliance' | 'voluntary';
-  api_endpoint: string;
-  api_ready: boolean;
   credit_unit: string;
   wallet: string;
+  api_endpoint: string;
+  api_doc: string;
+  auth_type: string;
 }
 
 export const REGISTRIES: Registry[] = [
   {
-    id: 'ccts',
-    name: 'India CCTS (NSDL)',
-    type: 'compliance',
-    api_endpoint: 'https://icm.beeindia.gov.in/api/v1/form-a',
-    api_ready: true,
-    credit_unit: 'CCC',
-    wallet: 'NSDL',
-  },
-  {
-    id: 'verra',
-    name: 'Verra VCS',
+    id: 'verr',
+    name: 'Verra (VCS)',
     type: 'voluntary',
-    api_endpoint: 'https://registry.verra.org/api/v1/issuance',
-    api_ready: true,
     credit_unit: 'VCU',
-    wallet: 'Verra Custody',
+    wallet: 'Verra Registry Wallet',
+    api_endpoint: 'https://registry.verra.org/api/v1',
+    api_doc: 'Verra API v1 — Project submission, validation, issuance',
+    auth_type: 'OAuth 2.0 + API Key',
   },
   {
-    id: 'gold_standard',
+    id: 'icm',
+    name: 'ICM (Indian Carbon Market)',
+    type: 'compliance',
+    credit_unit: 'CCC',
+    wallet: 'ICM Custody Wallet',
+    api_endpoint: 'https://icm.gov.in/api/v2',
+    api_doc: 'ICM Compliance API v2 — GEI obligated entities',
+    auth_type: 'BIS Certificate + API Key',
+  },
+  {
+    id: 'i-rec',
+    name: 'I-REC Registry',
+    type: 'voluntary',
+    credit_unit: 'I-REC',
+    wallet: 'I-REC Custody Account',
+    api_endpoint: 'https://irec.energyregistry.org/api/v1',
+    api_doc: 'I-REC API v1 — Renewable Energy Certificate issuance',
+    auth_type: 'API Key + Account ID',
+  },
+  {
+    id: 'gold-standard',
     name: 'Gold Standard',
     type: 'voluntary',
-    api_endpoint: 'https://registry.goldstandard.org/api/v1/issuance',
-    api_ready: true,
     credit_unit: 'GS-VER',
-    wallet: 'GS Custody',
+    wallet: 'Gold Standard Registry',
+    api_endpoint: 'https://registry.goldstandard.org/api/v1',
+    api_doc: 'Gold Standard API — VER issuance and retirement',
+    auth_type: 'OAuth 2.0',
   },
   {
-    id: 'irec',
-    name: 'I-TRACK (I-REC)',
-    type: 'compliance',
-    api_endpoint: 'https://api.evident.app/v1/irec/issuance',
-    api_ready: true,
-    credit_unit: 'I-REC',
-    wallet: 'I-REC Custody',
-  },
-  {
-    id: 'gcc',
-    name: 'Global Carbon Council',
+    id: 'acm',
+    name: 'ACM (AirCarbon Market)',
     type: 'voluntary',
-    api_endpoint: 'https://registry.gcc.org/api/v1/issuance',
-    api_ready: true,
-    credit_unit: 'ACC',
-    wallet: 'GCC Custody',
-  },
-  {
-    id: 'isometric',
-    name: 'Isometric',
-    type: 'voluntary',
-    api_endpoint: 'https://registry.isometric.com/api/v1/cdr',
-    api_ready: true,
-    credit_unit: 'CDR Unit',
-    wallet: 'Isometric Custody',
-  },
-  {
-    id: 'puro',
-    name: 'Puro.earth',
-    type: 'voluntary',
-    api_endpoint: 'https://registry.puro.earth/api/v1/corc',
-    api_ready: true,
-    credit_unit: 'CORC',
-    wallet: 'Puro Custody',
+    credit_unit: 'ACU',
+    wallet: 'AirCarbon Custody',
+    api_endpoint: 'https://trade.aircarbon.co/api/v1',
+    api_doc: 'AirCarbon API — Tokenized carbon credits',
+    auth_type: 'API Key + Wallet Signature',
   },
 ];

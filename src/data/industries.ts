@@ -1,52 +1,19 @@
 export interface Industry {
   id: string;
   name: string;
-  scope1_sensors: string[];
-  scope2_sensors: string[];
-  scope3_sensors: string[];
+  sector: string;
+  geiObligated: boolean;
 }
 
 export const INDUSTRIES: Industry[] = [
-  {
-    id: 'cement',
-    name: 'Cement',
-    scope1_sensors: ['BLK-S-CO2', 'BLK-S-FLOW'],
-    scope2_sensors: ['BLK-M-KWH', 'BLK-M-THRML'],
-    scope3_sensors: ['BLK-S-WTE'],
-  },
-  {
-    id: 'aluminium',
-    name: 'Aluminium',
-    scope1_sensors: ['BLK-S-FLUOR', 'BLK-S-FLOW'],
-    scope2_sensors: ['BLK-M-KWH-HV'],
-    scope3_sensors: ['BLK-S-WTE'],
-  },
-  {
-    id: 'steel',
-    name: 'Steel',
-    scope1_sensors: ['BLK-S-CO2', 'BLK-S-FLOW', 'BLK-S-CH4P'],
-    scope2_sensors: ['BLK-M-KWH', 'BLK-M-THRML'],
-    scope3_sensors: ['BLK-S-WTE'],
-  },
-  {
-    id: 'power',
-    name: 'Power Generation',
-    scope1_sensors: ['BLK-S-CO2', 'BLK-S-FLOW'],
-    scope2_sensors: ['BLK-M-KWH'],
-    scope3_sensors: ['BLK-S-WTE'],
-  },
-  {
-    id: 'chlor-alkali',
-    name: 'Chlor-Alkali',
-    scope1_sensors: ['BLK-S-FLUOR', 'BLK-S-CO2'],
-    scope2_sensors: ['BLK-M-KWH'],
-    scope3_sensors: ['BLK-S-WTE'],
-  },
-  {
-    id: 'pulp-paper',
-    name: 'Pulp & Paper',
-    scope1_sensors: ['BLK-S-CO2', 'BLK-S-FLOW'],
-    scope2_sensors: ['BLK-M-KWH'],
-    scope3_sensors: ['BLK-S-WTE'],
-  },
+  { id: 'steel', name: 'Steel', sector: 'Heavy Industry', geiObligated: true },
+  { id: 'cement', name: 'Cement', sector: 'Heavy Industry', geiObligated: true },
+  { id: 'aluminium', name: 'Aluminium', sector: 'Heavy Industry', geiObligated: true },
+  { id: 'power', name: 'Power Generation', sector: 'Energy', geiObligated: true },
+  { id: 'chlor-alkali', name: 'Chlor-Alkali', sector: 'Chemical', geiObligated: true },
+  { id: 'pulp-paper', name: 'Pulp & Paper', sector: 'Manufacturing', geiObligated: true },
+  { id: 'solar', name: 'Solar RE', sector: 'Renewable Energy', geiObligated: false },
+  { id: 'wind', name: 'Wind RE', sector: 'Renewable Energy', geiObligated: false },
+  { id: 'nbs', name: 'NbS / Afforestation', sector: 'Nature-Based', geiObligated: false },
+  { id: 'biochar', name: 'Biochar', sector: 'Removal', geiObligated: false },
 ];

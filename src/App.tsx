@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './components/LoginPage';
 import Navigation from './components/Layout/Navigation';
-import DeveloperDashboard from './components/Developer/DeveloperDashboard';
 import AuditorDashboard from './components/Auditor/AuditorDashboard';
+import DeveloperDashboard from './components/Developer/DeveloperDashboard';
 import BuyerDashboard from './components/Buyer/BuyerDashboard';
 
 function AppContent() {
   const { user, userProfile, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifications] = useState(3);
 
   if (loading) {
     return (
@@ -28,16 +27,11 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navigation
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        notifications={notifications}
-      />
-
+      <Navigation sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} notifications={3} />
       <main>
         <div className="max-w-7xl mx-auto">
-          {userProfile.user_type === 'developer' && <DeveloperDashboard />}
           {userProfile.user_type === 'auditor' && <AuditorDashboard />}
+          {userProfile.user_type === 'developer' && <DeveloperDashboard />}
           {userProfile.user_type === 'buyer' && <BuyerDashboard />}
         </div>
       </main>
@@ -45,12 +39,10 @@ function AppContent() {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <AuthProvider>
       <AppContent />
     </AuthProvider>
   );
 }
-
-export default App;

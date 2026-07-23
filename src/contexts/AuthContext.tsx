@@ -1,44 +1,46 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Database } from '../types/database';
+import type { UserProfile } from '../types';
 
-type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
-
-interface AuthContextType {
-  user: User | null;
+interface AuthContextValue {
+  user: { id: string; email: string } | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signUp: (email: string, password: string, userType: 'auditor' | 'developer' | 'buyer', companyName?: string, phone?: string) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    userType: 'auditor' | 'developer' | 'buyer',
+    companyName: string,
+    phone: string
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
-      setUser(session?.user ?? null);
       if (session?.user) {
-        loadUserProfile(session.user.id);
+        setUser({ id: session.user.id, email: session.user.email });
+        loadProfile(session.user.id);
       } else {
         setLoading(false);
       }
-    }).catch(() => {
-      setLoading(false);
-    });
+    }).catch(() => setLoading(false));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      (() => {
-        setUser(session?.user ?? null);
+      (async () => {
         if (session?.user) {
-          loadUserProfile(session.user.id);
+          setUser({ id: session.user.id, email: session.user.email });
+          await loadProfile(session.user.id);
         } else {
+          setUser(null);
           setUserProfile(null);
           setLoading(false);
         }
@@ -48,109 +50,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function loadUserProfile(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+  async function loadProfile(userId: string) {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
 
-      if (error) throw error;
-      setUserProfile(data);
-    } catch (error) {
-      console.error('Error loading user profile:', error);
-    } finally {
+    if (error || !data) {
       setLoading(false);
+      return;
     }
-  }
-
-  async function signUp(
-    email: string,
-    password: string,
-    userType: 'auditor' | 'developer' | 'buyer',
-    companyName?: string,
-    phone?: string
-  ) {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // signUp may return a session immediately (email confirmation off).
-        // If not, sign in to establish one so RLS ownership checks pass.
-        let session = data.session;
-        if (!session) {
-          const { data: signInData, error: signInError } =
-            await supabase.auth.signInWithPassword({ email, password });
-          if (signInError) throw signInError;
-          session = signInData.session;
-        }
-
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: data.user.id,
-            user_type: userType,
-            company_name: companyName,
-            phone: phone,
-          });
-
-        if (profileError) throw profileError;
-
-        const { error: walletError } = await supabase
-          .from('wallets')
-          .insert({
-            user_id: data.user.id,
-          });
-
-        if (walletError) throw walletError;
-      }
-
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
+    setUserProfile(data);
+    setLoading(false);
   }
 
   async function signIn(email: string, password: string) {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
+  }
 
-      if (error) throw error;
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
+  async function signUp(email: string, password: string, userType: 'auditor' | 'developer' | 'buyer', companyName: string, phone: string) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return { error: error.message };
+
+    if (data.user) {
+      await supabase.from('user_profiles').insert({
+        id: data.user.id,
+        user_type: userType,
+        company_name: companyName,
+        phone: phone,
+      });
+      await supabase.from('wallets').insert({
+        user_id: data.user.id,
+        available_credits: 0,
+        pending_credits: 0,
+        retired_credits: 0,
+        total_value: 0,
+      });
     }
+    return { error: null };
   }
 
   async function signOut() {
     await supabase.auth.signOut();
+    setUser(null);
+    setUserProfile(null);
   }
 
-  const value = {
-    user,
-    userProfile,
-    loading,
-    signUp,
-    signIn,
-    signOut,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signUp, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 }
