@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  ShoppingCart, Loader2, CheckCircle, AlertCircle, Fingerprint,
-  Wallet, TrendingUp, Building
-} from 'lucide-react';
+import { ShoppingCart, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Wallet, TrendingUp, Building } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { REGISTRIES } from '../../data/registries';

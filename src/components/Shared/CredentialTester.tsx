@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, CheckCircle, XCircle, ShieldCheck, KeyRound } from 'lucide-react';
+import { Loader as Loader2, CircleCheck as CheckCircle, Circle as XCircle, ShieldCheck, KeyRound } from 'lucide-react';
 import {
   validateRegistryCredential,
   validateExchangeCredential,
