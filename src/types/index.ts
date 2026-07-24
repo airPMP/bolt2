@@ -1,8 +1,14 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
+export type Role = 'auditor' | 'developer' | 'buyer';
+
+export type ProjectStatus = 'PENDING_AUDITOR' | 'REGISTRY_VALIDATED' | 'DATA_STREAMING' | 'CREDITS_ISSUED';
+
+export type AuthStatus = 'pending' | 'authenticated' | 'failed';
+
 export interface UserProfile {
   id: string;
-  user_type: 'auditor' | 'developer' | 'buyer';
+  user_type: Role;
   company_name: string | null;
   phone: string | null;
   created_at: string;
@@ -50,7 +56,7 @@ export interface PlantConfig {
   mac_address: string | null;
   auditor_id: string;
   developer_id: string | null;
-  status: string;
+  status: ProjectStatus;
   config_json: Json;
   created_at: string;
   updated_at: string;
@@ -65,7 +71,7 @@ export interface PersonaCredential {
   api_endpoint: string | null;
   username: string | null;
   password: string | null;
-  auth_status: 'pending' | 'authenticated' | 'failed';
+  auth_status: AuthStatus;
   verified_at: string | null;
   metadata: Json;
   created_at: string;
@@ -78,7 +84,7 @@ export interface AuthStamp {
   persona: string;
   provider: string;
   provider_type: string;
-  status: 'pending' | 'authenticated' | 'failed' | 'expired';
+  status: AuthStatus;
   stamp_hash: string | null;
   stamped_at: string;
   expires_at: string | null;

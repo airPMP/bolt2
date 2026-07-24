@@ -1,19 +1,13 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import type { UserProfile } from '../types';
+import type { UserProfile, Role } from '../types';
 
 interface AuthContextValue {
   user: { id: string; email: string } | null;
   userProfile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (
-    email: string,
-    password: string,
-    userType: 'auditor' | 'developer' | 'buyer',
-    companyName: string,
-    phone: string
-  ) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, userType: Role, companyName: string, phone: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -51,16 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function loadProfile(userId: string) {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error || !data) {
-      setLoading(false);
-      return;
-    }
+    const { data, error } = await supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle();
+    if (error || !data) { setLoading(false); return; }
     setUserProfile(data);
     setLoading(false);
   }
@@ -70,24 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   }
 
-  async function signUp(email: string, password: string, userType: 'auditor' | 'developer' | 'buyer', companyName: string, phone: string) {
+  async function signUp(email: string, password: string, userType: Role, companyName: string, phone: string) {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { error: error.message };
-
     if (data.user) {
-      await supabase.from('user_profiles').insert({
-        id: data.user.id,
-        user_type: userType,
-        company_name: companyName,
-        phone: phone,
-      });
-      await supabase.from('wallets').insert({
-        user_id: data.user.id,
-        available_credits: 0,
-        pending_credits: 0,
-        retired_credits: 0,
-        total_value: 0,
-      });
+      await supabase.from('user_profiles').insert({ id: data.user.id, user_type: userType, company_name: companyName, phone });
+      await supabase.from('wallets').insert({ user_id: data.user.id, available_credits: 0, pending_credits: 0, retired_credits: 0, total_value: 0 });
     }
     return { error: null };
   }
@@ -98,11 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserProfile(null);
   }
 
-  return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signUp, signOut }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, userProfile, loading, signIn, signUp, signOut }}>{children}</AuthContext.Provider>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

@@ -9,31 +9,7 @@ export interface Exchange {
 }
 
 export const EXCHANGES: Exchange[] = [
-  {
-    id: 'iex',
-    name: 'IEX (Indian Energy Exchange)',
-    type: 'compliance',
-    api_endpoint: 'https://api.iex.co/v2/carbon',
-    api_doc: 'IEX Carbon Market API — REC and CCC trading',
-    auth_type: 'API Key + Trading Account',
-    supported_tokens: ['I-REC', 'CCC'],
-  },
-  {
-    id: 'icm-exchange',
-    name: 'ICM Exchange',
-    type: 'compliance',
-    api_endpoint: 'https://exchange.icm.gov.in/api/v1',
-    api_doc: 'ICM Exchange — Carbon Credit Certificate trading',
-    auth_type: 'BIS + Exchange Member ID',
-    supported_tokens: ['CCC'],
-  },
-  {
-    id: 'aircarbon',
-    name: 'AirCarbon Exchange',
-    type: 'voluntary',
-    api_endpoint: 'https://trade.aircarbon.co/api/v1/exchange',
-    api_doc: 'AirCarbon — Tokenized voluntary carbon trading',
-    auth_type: 'API Key + Wallet Signature',
-    supported_tokens: ['VCU', 'GS-VER', 'ACU', 'I-REC'],
-  },
+  { id: 'IEX', name: 'IEX (Indian Energy Exchange)', type: 'compliance', api_endpoint: 'https://api.iex.co/v2/carbon', api_doc: 'IEX Carbon Market API — REC and CCC trading', auth_type: 'API Key + Trading Account', supported_tokens: ['I-REC', 'CCC'] },
+  { id: 'PXIL', name: 'PXIL (Power Exchange India)', type: 'compliance', api_endpoint: 'https://api.pxil.co/v1/carbon', api_doc: 'PXIL Carbon API — REC and CCC trading', auth_type: 'API Key + Member ID', supported_tokens: ['I-REC', 'CCC'] },
+  { id: 'AirCarbon', name: 'AirCarbon Exchange', type: 'voluntary', api_endpoint: 'https://trade.aircarbon.co/api/v1/exchange', api_doc: 'AirCarbon — Tokenized voluntary carbon trading', auth_type: 'API Key + Wallet Signature', supported_tokens: ['VCU', 'GS-VER', 'ACU', 'I-REC'] },
 ];
