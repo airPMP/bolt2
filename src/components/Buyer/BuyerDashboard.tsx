@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShoppingCart, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Wallet, TrendingUp, Building } from 'lucide-react';
+import { ShoppingCart, Loader2, CheckCircle, AlertCircle, Fingerprint, Wallet, TrendingUp, Building } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { REGISTRIES } from '../../data/registries';
@@ -52,208 +52,81 @@ export default function BuyerDashboard() {
     try {
       const listing = listings.find(l => l.id === buyForm.listingId);
       if (!listing) throw new Error('Select a listing');
-      if (!registryCred) throw new Error('Registry not authenticated — get green tick first');
-      if (!walletCred) throw new Error('Wallet not authenticated — get green tick first');
+      if (!registryCred) throw new Error('Registry not authenticated');
+      if (!walletCred) throw new Error('Wallet not authenticated');
       const exCred = exchangeCreds.find(c => c.provider === listing.exchange);
-      if (!exCred) throw new Error('Exchange not authenticated — get green tick first');
-
+      if (!exCred) throw new Error('Exchange not authenticated');
       await new Promise(r => setTimeout(r, 1500));
       const totalPrice = buyForm.quantity * (listing.price_per_unit || 0);
-
       await supabase.from('exchange_listings').update({ listing_status: 'sold' }).eq('id', listing.id);
-
-      if (wallet) {
-        await supabase.from('wallets').update({
-          available_credits: wallet.available_credits + buyForm.quantity,
-          total_value: wallet.total_value + totalPrice,
-        }).eq('id', wallet.id);
-      }
-
-      await supabase.from('auth_stamps').insert({
-        user_id: user.id, persona: 'buyer', provider: listing.exchange,
-        provider_type: 'purchase', status: 'authenticated',
-        stamp_hash: `PUR-${Date.now().toString(36).toUpperCase()}`, stamped_at: new Date().toISOString(),
-        metadata: { listing_id: listing.id, quantity: buyForm.quantity, total_price: totalPrice, token_type: listing.token_type },
-      });
-
-      setSuccess(`Purchase complete: ${buyForm.quantity} ${listing.token_type} for ₹${totalPrice.toLocaleString('en-IN')}. Stamped and recorded.`);
-      await loadData();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Purchase failed'); }
+      if (wallet) await supabase.from('wallets').update({ available_credits: wallet.available_credits + buyForm.quantity, total_value: wallet.total_value + totalPrice }).eq('id', wallet.id);
+      await supabase.from('auth_stamps').insert({ user_id: user.id, persona: 'buyer', provider: listing.exchange, provider_type: 'purchase', status: 'authenticated', stamp_hash: `PUR-${Date.now().toString(36).toUpperCase()}`, stamped_at: new Date().toISOString(), metadata: { listing_id: listing.id, quantity: buyForm.quantity, total_price: totalPrice } });
+      setSuccess(`Purchase complete: ${buyForm.quantity} ${listing.token_type} for ₹${totalPrice.toLocaleString('en-IN')}.`); await loadData();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
     finally { setLoading(false); }
   }
 
   const tabs: { id: BuyerTab; label: string; icon: typeof ShoppingCart }[] = [
-    { id: 'overview', label: 'Overview', icon: ShoppingCart },
-    { id: 'credentials', label: 'Credentials', icon: Fingerprint },
-    { id: 'buy', label: 'Buy Credits', icon: TrendingUp },
-    { id: 'history', label: 'Transaction History', icon: Wallet },
+    { id: 'overview', label: 'Overview', icon: ShoppingCart }, { id: 'credentials', label: 'Credentials', icon: Fingerprint },
+    { id: 'buy', label: 'Buy Credits', icon: TrendingUp }, { id: 'history', label: 'History', icon: Wallet },
   ];
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-1">Credit Buyer Dashboard</h1>
-        <p className="text-gray-600">Authenticate with registry, wallet, and exchange to purchase carbon credits</p>
-      </div>
-
+      <div className="mb-6"><h1 className="text-3xl font-bold text-gray-900 mb-1">Credit Buyer Dashboard</h1><p className="text-gray-600">Authenticate with registry, wallet, and exchange to purchase carbon credits</p></div>
       <div className="mb-6"><AuthStampPanel stamps={stamps} loading={false} /></div>
-
       {error && <div className="mb-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"><AlertCircle className="w-5 h-5 shrink-0 mt-0.5" /><span className="text-sm">{error}</span></div>}
       {success && <div className="mb-4 flex items-start gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg"><CheckCircle className="w-5 h-5 shrink-0 mt-0.5" /><span className="text-sm">{success}</span></div>}
+      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">{tabs.map(t => { const Icon = t.icon; return <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shrink-0 ${tab === t.id ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}><Icon className="w-4 h-4" />{t.label}</button>; })}</div>
 
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-        {tabs.map(t => { const Icon = t.icon; return (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shrink-0 ${tab === t.id ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-            <Icon className="w-4 h-4" />{t.label}
-          </button>
-        ); })}
-      </div>
-
-      {/* Overview */}
       {tab === 'overview' && (
         <div className="space-y-6">
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl shadow p-5">
-              <div className="flex items-center gap-3 mb-3"><div className="bg-blue-100 w-10 h-10 rounded-lg flex items-center justify-center"><Building className="w-5 h-5 text-blue-600" /></div><span className="text-sm text-gray-500">Registry Auth</span></div>
-              <AuthBadge status={registryCred ? 'authenticated' : 'pending'} label={registryCred ? REGISTRIES.find(r => r.id === registryCred.provider)?.name || 'Authenticated' : 'Not Connected'} />
-            </div>
-            <div className="bg-white rounded-xl shadow p-5">
-              <div className="flex items-center gap-3 mb-3"><div className="bg-teal-100 w-10 h-10 rounded-lg flex items-center justify-center"><Wallet className="w-5 h-5 text-teal-600" /></div><span className="text-sm text-gray-500">Wallet Auth</span></div>
-              <AuthBadge status={walletCred ? 'authenticated' : 'pending'} label={walletCred ? 'Wallet Connected' : 'Not Connected'} />
-            </div>
-            <div className="bg-white rounded-xl shadow p-5">
-              <div className="flex items-center gap-3 mb-3"><div className="bg-purple-100 w-10 h-10 rounded-lg flex items-center justify-center"><TrendingUp className="w-5 h-5 text-purple-600" /></div><span className="text-sm text-gray-500">Exchange Auth</span></div>
-              <AuthBadge status={exchangeCreds.length > 0 ? 'authenticated' : 'pending'} label={exchangeCreds.length > 0 ? `${exchangeCreds.length} Exchange(s)` : 'Not Connected'} />
-            </div>
+            <div className="bg-white rounded-xl shadow p-5"><div className="flex items-center gap-3 mb-3"><div className="bg-blue-100 w-10 h-10 rounded-lg flex items-center justify-center"><Building className="w-5 h-5 text-blue-600" /></div><span className="text-sm text-gray-500">Registry Auth</span></div><AuthBadge status={registryCred ? 'authenticated' : 'pending'} label={registryCred ? REGISTRIES.find(r => r.id === registryCred.provider)?.name || 'Authenticated' : 'Not Connected'} /></div>
+            <div className="bg-white rounded-xl shadow p-5"><div className="flex items-center gap-3 mb-3"><div className="bg-teal-100 w-10 h-10 rounded-lg flex items-center justify-center"><Wallet className="w-5 h-5 text-teal-600" /></div><span className="text-sm text-gray-500">Wallet Auth</span></div><AuthBadge status={walletCred ? 'authenticated' : 'pending'} label={walletCred ? 'Connected' : 'Not Connected'} /></div>
+            <div className="bg-white rounded-xl shadow p-5"><div className="flex items-center gap-3 mb-3"><div className="bg-purple-100 w-10 h-10 rounded-lg flex items-center justify-center"><TrendingUp className="w-5 h-5 text-purple-600" /></div><span className="text-sm text-gray-500">Exchange Auth</span></div><AuthBadge status={exchangeCreds.length > 0 ? 'authenticated' : 'pending'} label={exchangeCreds.length > 0 ? `${exchangeCreds.length} Exchange(s)` : 'Not Connected'} /></div>
           </div>
-          <div className="bg-white rounded-xl shadow p-5">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-teal-50 rounded-lg"><div className="text-xs text-teal-600 mb-1">Available Credits</div><div className="text-2xl font-bold text-teal-700">{wallet?.available_credits || 0}</div></div>
-              <div className="p-4 bg-purple-50 rounded-lg"><div className="text-xs text-purple-600 mb-1">Total Value (₹)</div><div className="text-2xl font-bold text-purple-700">{wallet?.total_value?.toLocaleString('en-IN') || 0}</div></div>
-              <div className="p-4 bg-amber-50 rounded-lg"><div className="text-xs text-amber-600 mb-1">Auth Stamps</div><div className="text-2xl font-bold text-amber-700">{stamps.length}</div></div>
-            </div>
-          </div>
+          <div className="bg-white rounded-xl shadow p-5"><div className="grid grid-cols-3 gap-4"><div className="p-4 bg-teal-50 rounded-lg"><div className="text-xs text-teal-600 mb-1">Available Credits</div><div className="text-2xl font-bold text-teal-700">{wallet?.available_credits || 0}</div></div><div className="p-4 bg-purple-50 rounded-lg"><div className="text-xs text-purple-600 mb-1">Value (₹)</div><div className="text-2xl font-bold text-purple-700">{wallet?.total_value?.toLocaleString('en-IN') || 0}</div></div><div className="p-4 bg-amber-50 rounded-lg"><div className="text-xs text-amber-600 mb-1">Auth Stamps</div><div className="text-2xl font-bold text-amber-700">{stamps.length}</div></div></div></div>
         </div>
       )}
 
-      {/* Credentials */}
       {tab === 'credentials' && (
         <div className="space-y-6">
-          {/* Registry Auth */}
           <div className="bg-white rounded-xl shadow p-6 max-w-3xl">
             <h2 className="text-lg font-bold text-gray-900 mb-2">Registry Credentials</h2>
-            <p className="text-gray-600 mb-4 text-sm">Authenticate with the carbon registry using your buyer registry credentials.</p>
-            {registryCred && (
-              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-600" /><span className="text-sm font-medium text-emerald-700">Authenticated with {REGISTRIES.find(r => r.id === registryCred.provider)?.name}</span>
-                <AuthBadge status="authenticated" label="Green Tick" size="sm" />
-              </div>
-            )}
-            {!registryCred && user && (
-              <>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Registry</label>
-                  <select value={selectedRegistry} onChange={e => setSelectedRegistry(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2">
-                    <option value="">Select Registry</option>{REGISTRIES.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
-                </div>
-                {selectedRegistry && <CredentialTester credType="registry" providerId={selectedRegistry} userId={user.id} persona="buyer" onAuthenticated={() => { setSelectedRegistry(''); loadData(); }} />}
-              </>
-            )}
+            {registryCred && <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2"><CheckCircle className="w-5 h-5 text-emerald-600" /><span className="text-sm font-medium text-emerald-700">Authenticated with {REGISTRIES.find(r => r.id === registryCred.provider)?.name}</span><AuthBadge status="authenticated" label="Green Tick" size="sm" /></div>}
+            {!registryCred && user && <><div className="mb-4"><label className="block text-sm font-medium text-gray-700 mb-2">Registry</label><select value={selectedRegistry} onChange={e => setSelectedRegistry(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="">Select</option>{REGISTRIES.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>{selectedRegistry && <CredentialTester credType="registry" providerId={selectedRegistry} userId={user.id} persona="buyer" onAuthenticated={() => { setSelectedRegistry(''); loadData(); }} />}</>}
           </div>
-
-          {/* Wallet Auth */}
           <div className="bg-white rounded-xl shadow p-6 max-w-3xl">
             <h2 className="text-lg font-bold text-gray-900 mb-2">Wallet Credentials</h2>
-            <p className="text-gray-600 mb-4 text-sm">Authenticate your wallet for debit operations during purchase.</p>
-            {walletCred && (
-              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-600" /><span className="text-sm font-medium text-emerald-700">Wallet authenticated</span>
-                <AuthBadge status="authenticated" label="Green Tick" size="sm" />
-              </div>
-            )}
-            {!walletCred && user && <CredentialTester credType="wallet" providerId="blockvolt-wallet" userId={user.id} persona="buyer" onAuthenticated={() => loadData()} label="Blockvolt Wallet Credentials" />}
+            {walletCred && <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2"><CheckCircle className="w-5 h-5 text-emerald-600" /><span className="text-sm font-medium text-emerald-700">Wallet authenticated</span><AuthBadge status="authenticated" label="Green Tick" size="sm" /></div>}
+            {!walletCred && user && <CredentialTester credType="wallet" providerId="blockvolt-wallet" userId={user.id} persona="buyer" onAuthenticated={() => loadData()} label="Blockvolt Wallet" />}
           </div>
-
-          {/* Exchange Auth */}
           <div className="bg-white rounded-xl shadow p-6 max-w-3xl">
             <h2 className="text-lg font-bold text-gray-900 mb-2">Exchange Credentials</h2>
-            <p className="text-gray-600 mb-4 text-sm">Authenticate with the exchange for transaction API access.</p>
-            {exchangeCreds.length > 0 && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {exchangeCreds.map(c => (
-                  <div key={c.id} className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg">
-                    <CheckCircle className="w-4 h-4 text-emerald-600" /><span className="text-sm text-emerald-700">{EXCHANGES.find(e => e.id === c.provider)?.name}</span>
-                    <AuthBadge status="authenticated" label="Green Tick" size="sm" />
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Exchange</label>
-              <select value={selectedExchange} onChange={e => setSelectedExchange(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2">
-                <option value="">Select Exchange</option>{EXCHANGES.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-              </select>
-            </div>
-            {selectedExchange && !exchangeCreds.find(c => c.provider === selectedExchange) && user && (
-              <CredentialTester credType="exchange" providerId={selectedExchange} userId={user.id} persona="buyer" onAuthenticated={() => { setSelectedExchange(''); loadData(); }} />
-            )}
+            {exchangeCreds.length > 0 && <div className="mb-4 flex flex-wrap gap-2">{exchangeCreds.map(c => <div key={c.id} className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg"><CheckCircle className="w-4 h-4 text-emerald-600" /><span className="text-sm text-emerald-700">{EXCHANGES.find(e => e.id === c.provider)?.name}</span><AuthBadge status="authenticated" label="Green Tick" size="sm" /></div>)}</div>}
+            <div className="mb-4"><label className="block text-sm font-medium text-gray-700 mb-2">Exchange</label><select value={selectedExchange} onChange={e => setSelectedExchange(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="">Select</option>{EXCHANGES.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}</select></div>
+            {selectedExchange && !exchangeCreds.find(c => c.provider === selectedExchange) && user && <CredentialTester credType="exchange" providerId={selectedExchange} userId={user.id} persona="buyer" onAuthenticated={() => { setSelectedExchange(''); loadData(); }} />}
           </div>
         </div>
       )}
 
-      {/* Buy Credits */}
       {tab === 'buy' && (
         <div className="bg-white rounded-xl shadow p-6 max-w-4xl">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Buy Carbon Credits</h2>
-          <p className="text-gray-600 mb-4 text-sm">Select a listing and execute a buy. All three credentials (registry, wallet, exchange) must be authenticated.</p>
-          <div className="mb-4 flex flex-wrap gap-3">
-            <AuthBadge status={registryCred ? 'authenticated' : 'pending'} label={registryCred ? 'Registry ✓' : 'Registry ✗'} />
-            <AuthBadge status={walletCred ? 'authenticated' : 'pending'} label={walletCred ? 'Wallet ✓' : 'Wallet ✗'} />
-            <AuthBadge status={exchangeCreds.length > 0 ? 'authenticated' : 'pending'} label={exchangeCreds.length > 0 ? 'Exchange ✓' : 'Exchange ✗'} />
-          </div>
-          {!allAuthed && <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg"><p className="text-sm text-amber-700">Please authenticate all three credentials in the Credentials tab before buying.</p></div>}
-          {listings.length === 0 ? <p className="text-sm text-gray-400">No listings available. Waiting for developers to list tokens on exchanges.</p> : (
-            <>
-              <div className="space-y-2 mb-4">
-                {listings.map(l => (
-                  <div key={l.id} onClick={() => setBuyForm({ listingId: l.id, quantity: l.quantity, pricePerUnit: l.price_per_unit || 0 })} className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${buyForm.listingId === l.id ? 'border-purple-600 bg-purple-50' : 'border-gray-200 hover:border-purple-300'}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3"><TrendingUp className="w-5 h-5 text-purple-500" /><div><div className="font-medium text-sm text-gray-900">{l.quantity} {l.token_type}</div><div className="text-xs text-gray-500">{EXCHANGES.find(e => e.id === l.exchange)?.name} · ₹{l.price_per_unit}/unit</div></div></div>
-                      <div className="text-right"><div className="text-sm font-bold text-gray-900">₹{(l.quantity * (l.price_per_unit || 0)).toLocaleString('en-IN')}</div><div className="text-xs text-gray-500">Total</div></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {buyForm.listingId && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label><input type="number" value={buyForm.quantity} onChange={e => setBuyForm(f => ({ ...f, quantity: Number(e.target.value) }))} className="w-full border border-gray-300 rounded-lg px-4 py-2" /></div>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-2">Total Price (₹)</label><div className="text-lg font-bold text-gray-900 py-2">{(buyForm.quantity * buyForm.pricePerUnit).toLocaleString('en-IN')}</div></div>
-                  </div>
-                  <button onClick={handleBuy} disabled={loading || !allAuthed} className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 font-medium flex items-center gap-2">
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />}Execute Purchase & Stamp
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+          <div className="mb-4 flex flex-wrap gap-3"><AuthBadge status={registryCred ? 'authenticated' : 'pending'} label={registryCred ? 'Registry ✓' : 'Registry ✗'} /><AuthBadge status={walletCred ? 'authenticated' : 'pending'} label={walletCred ? 'Wallet ✓' : 'Wallet ✗'} /><AuthBadge status={exchangeCreds.length > 0 ? 'authenticated' : 'pending'} label={exchangeCreds.length > 0 ? 'Exchange ✓' : 'Exchange ✗'} /></div>
+          {!allAuthed && <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg"><p className="text-sm text-amber-700">Authenticate all three credentials first.</p></div>}
+          {listings.length === 0 ? <p className="text-sm text-gray-400">No listings available.</p> : <>
+            <div className="space-y-2 mb-4">{listings.map(l => <div key={l.id} onClick={() => setBuyForm({ listingId: l.id, quantity: l.quantity, pricePerUnit: l.price_per_unit || 0 })} className={`p-4 rounded-lg border-2 cursor-pointer ${buyForm.listingId === l.id ? 'border-purple-600 bg-purple-50' : 'border-gray-200'}`}><div className="flex items-center justify-between"><div className="flex items-center gap-3"><TrendingUp className="w-5 h-5 text-purple-500" /><div><div className="font-medium text-sm">{l.quantity} {l.token_type}</div><div className="text-xs text-gray-500">{EXCHANGES.find(e => e.id === l.exchange)?.name} · ₹{l.price_per_unit}/unit</div></div></div><div className="text-right"><div className="text-sm font-bold">₹{(l.quantity * (l.price_per_unit || 0)).toLocaleString('en-IN')}</div></div></div></div>)}</div>
+            {buyForm.listingId && <div className="space-y-4"><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label><input type="number" value={buyForm.quantity} onChange={e => setBuyForm(f => ({ ...f, quantity: Number(e.target.value) }))} className="w-full border border-gray-300 rounded-lg px-4 py-2" /></div><div><label className="block text-sm font-medium text-gray-700 mb-2">Total (₹)</label><div className="text-lg font-bold py-2">{(buyForm.quantity * buyForm.pricePerUnit).toLocaleString('en-IN')}</div></div></div><button onClick={handleBuy} disabled={loading || !allAuthed} className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 font-medium flex items-center gap-2">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />}Execute Purchase</button></div>}
+          </>}
         </div>
       )}
 
-      {/* History */}
       {tab === 'history' && (
         <div className="bg-white rounded-xl shadow p-6 max-w-4xl">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Transaction History</h2>
-          <div className="space-y-2">
-            {stamps.filter(s => s.provider_type === 'purchase').map(s => (
-              <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3"><ShoppingCart className="w-4 h-4 text-purple-500" /><div><span className="text-sm font-medium text-gray-900">Purchase on {EXCHANGES.find(e => e.id === s.provider)?.name || s.provider}</span><span className="text-xs text-gray-500 ml-2">{new Date(s.stamped_at).toLocaleString('en-IN')}</span></div></div>
-                <div className="flex items-center gap-2"><span className="text-xs font-mono text-gray-400">#{s.stamp_hash?.slice(0, 12)}</span><AuthBadge status="authenticated" label="Stamped" size="sm" /></div>
-              </div>
-            ))}
-            {stamps.filter(s => s.provider_type === 'purchase').length === 0 && <p className="text-sm text-gray-400">No purchases yet</p>}
-          </div>
+          <div className="space-y-2">{stamps.filter(s => s.provider_type === 'purchase').map(s => <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div className="flex items-center gap-3"><ShoppingCart className="w-4 h-4 text-purple-500" /><div><span className="text-sm font-medium">Purchase on {EXCHANGES.find(e => e.id === s.provider)?.name || s.provider}</span><span className="text-xs text-gray-500 ml-2">{new Date(s.stamped_at).toLocaleString('en-IN')}</span></div></div><div className="flex items-center gap-2"><span className="text-xs font-mono text-gray-400">#{s.stamp_hash?.slice(0, 12)}</span><AuthBadge status="authenticated" label="Stamped" size="sm" /></div></div>)}{stamps.filter(s => s.provider_type === 'purchase').length === 0 && <p className="text-sm text-gray-400">No purchases yet</p>}</div>
         </div>
       )}
     </div>

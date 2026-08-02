@@ -4,10 +4,10 @@ import Navigation from './components/Layout/Navigation';
 import AuditorDashboard from './components/Auditor/AuditorDashboard';
 import DeveloperDashboard from './components/Developer/DeveloperDashboard';
 import BuyerDashboard from './components/Buyer/BuyerDashboard';
+import CommunityDashboard from './components/Community/CommunityDashboard';
 
 function AppContent() {
   const { user, userProfile, loading } = useAuth();
-
   if (loading) return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
       <div className="text-center">
@@ -16,19 +16,16 @@ function AppContent() {
       </div>
     </div>
   );
-
   if (!user || !userProfile) return <LoginPage />;
-
   return (
     <div className="min-h-screen bg-gray-100">
       <Navigation />
-      <main>
-        <div className="max-w-7xl mx-auto">
-          {userProfile.user_type === 'auditor' && <AuditorDashboard />}
-          {userProfile.user_type === 'developer' && <DeveloperDashboard />}
-          {userProfile.user_type === 'buyer' && <BuyerDashboard />}
-        </div>
-      </main>
+      <main><div className="max-w-7xl mx-auto">
+        {userProfile.user_type === 'auditor' && <AuditorDashboard />}
+        {userProfile.user_type === 'developer' && <DeveloperDashboard />}
+        {userProfile.user_type === 'buyer' && <BuyerDashboard />}
+        {userProfile.user_type === 'community' && <CommunityDashboard />}
+      </div></main>
     </div>
   );
 }

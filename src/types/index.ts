@@ -1,10 +1,8 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
-
-export type Role = 'auditor' | 'developer' | 'buyer';
-
+export type Role = 'auditor' | 'developer' | 'buyer' | 'community';
 export type ProjectStatus = 'PENDING_AUDITOR' | 'REGISTRY_VALIDATED' | 'DATA_STREAMING' | 'CREDITS_ISSUED';
-
 export type AuthStatus = 'pending' | 'authenticated' | 'failed';
+export type MethodologyStatus = 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
 
 export interface UserProfile {
   id: string;
@@ -129,4 +127,66 @@ export interface ExchangeListing {
   listing_status: 'pending' | 'listed' | 'sold' | 'failed';
   exchange_response: Json;
   listed_at: string;
+}
+
+export interface CommunityMethodology {
+  id: string;
+  contributor_id: string;
+  contributor_name: string | null;
+  registry: string;
+  methodology_title: string;
+  methodology_id: string | null;
+  version: string;
+  formula: string;
+  approach: 'bottom-up' | 'top-down';
+  required_sensor_types: string[];
+  sensor_mapping: Json;
+  constants: Json;
+  emission_factors: Json;
+  description: string | null;
+  status: MethodologyStatus;
+  reviewer_id: string | null;
+  review_notes: string | null;
+  reviewed_at: string | null;
+  approved_at: string | null;
+  usage_count: number;
+  total_revenue: number;
+  contributor_revenue: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MethodologySimulation {
+  id: string;
+  methodology_id: string;
+  user_id: string;
+  days: number;
+  interval_minutes: number;
+  synthetic_data: Json;
+  results: Json;
+  summary: Json;
+  created_at: string;
+}
+
+export interface MethodologyUsage {
+  id: string;
+  methodology_id: string;
+  project_id: string | null;
+  user_id: string;
+  blocks: number;
+  fee_per_block: number;
+  contributor_share: number;
+  contributor_earnings: number;
+  recorded_at: string;
+}
+
+export interface BoqItem {
+  id: string;
+  sensor_type: string;
+  part_number: string;
+  description: string | null;
+  price: number;
+  unit: string;
+  category: string;
+  created_at: string;
 }

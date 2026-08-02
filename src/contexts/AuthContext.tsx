@@ -20,34 +20,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
-      if (session?.user) {
-        setUser({ id: session.user.id, email: session.user.email });
-        loadProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
+      if (session?.user) { setUser({ id: session.user.id, email: session.user.email }); loadProfile(session.user.id); }
+      else { setLoading(false); }
     }).catch(() => setLoading(false));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       (async () => {
-        if (session?.user) {
-          setUser({ id: session.user.id, email: session.user.email });
-          await loadProfile(session.user.id);
-        } else {
-          setUser(null);
-          setUserProfile(null);
-          setLoading(false);
-        }
+        if (session?.user) { setUser({ id: session.user.id, email: session.user.email }); await loadProfile(session.user.id); }
+        else { setUser(null); setUserProfile(null); setLoading(false); }
       })();
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
   async function loadProfile(userId: string) {
-    const { data, error } = await supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle();
-    if (error || !data) { setLoading(false); return; }
-    setUserProfile(data);
+    const { data } = await supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle();
+    if (data) setUserProfile(data);
     setLoading(false);
   }
 
@@ -66,11 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    setUser(null);
-    setUserProfile(null);
-  }
+  async function signOut() { await supabase.auth.signOut(); setUser(null); setUserProfile(null); }
 
   return <AuthContext.Provider value={{ user, userProfile, loading, signIn, signUp, signOut }}>{children}</AuthContext.Provider>;
 }
