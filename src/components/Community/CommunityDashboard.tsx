@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Users, FileCode, FlaskConical, CheckCircle, Loader2,
-  AlertCircle, Send, TrendingUp, DollarSign, Beaker, Package
-} from 'lucide-react';
+import { Users, FileCode, FlaskConical, CircleCheck as CheckCircle, Loader as Loader2, CircleAlert as AlertCircle, Send, TrendingUp, DollarSign, Beaker, Package } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { REGISTRIES } from '../../data/registries';
