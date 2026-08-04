@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Server, Lock, Cpu, FileCheck, CircleCheck as CheckCircle, Loader as Loader2, CircleAlert as AlertCircle, ChevronRight, Send, FingerprintPattern as Fingerprint, Wifi, Beaker, Circle as XCircle } from 'lucide-react';
+import { ShieldCheck, Server, Lock, Cpu, FileCheck, CircleCheck as CheckCircle, Loader as Loader2, CircleAlert as AlertCircle, ChevronRight, Send, FingerprintPattern as Fingerprint, Wifi, Beaker, Circle as XCircle, Sparkles, FileText } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { INDUSTRIES } from '../../data/industries';
@@ -47,6 +47,8 @@ export default function AuditorDashboard() {
   const [selectedPlantCode, setSelectedPlantCode] = useState('');
   const [selectedMac, setSelectedMac] = useState('');
   const [reviewNotes, setReviewNotes] = useState('');
+  const [autoFillData, setAutoFillData] = useState<Record<string, string>>({});
+  const [autoFillLoading, setAutoFillLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -123,6 +125,54 @@ export default function AuditorDashboard() {
       setSuccess(`MAC ${selectedMac} locked to ${plant.plant_name}.`); await loadData();
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
     finally { setLoading(false); }
+  }
+
+  async function handleAutoFillForm() {
+    if (!user) return;
+    setAutoFillLoading(true); setError(''); setSuccess('');
+    try {
+      const plant = plantConfigs.find(p => p.plant_code === selectedPlantCode);
+      if (!plant) throw new Error('Select a plant first');
+
+      // Fetch sensor data for this plant
+      const { data: sensorData } = await supabase.from('sensor_data').select('*').eq('plant_config_id', plant.id).order('recorded_at', { ascending: false }).limit(10);
+      const { data: submissions } = await supabase.from('data_submissions').select('*').eq('plant_config_id', plant.id).order('submitted_at', { ascending: false }).limit(5);
+
+      // Simulate AI-assisted form filling based on plant config and sensor data
+      const configJson = (plant.config_json || {}) as Record<string, number>;
+      const productOutput = configJson.currentProductOutput || configJson.product_output || 1000;
+      const grossEmissions = (sensorData || []).reduce((sum: number, s: Record<string, unknown>) => sum + (Number(s.sensor_value) || 0), 0);
+      const creditedMitigation = (submissions || []).reduce((sum: number, s: Record<string, any>) => sum + ((s.registry_response as Record<string, number>)?.validated_credits || 0), 0);
+      const netGei = grossEmissions - creditedMitigation;
+      const energyConsumed = (sensorData || []).filter((s: Record<string, unknown>) => s.sensor_type === 'power_meter').reduce((sum: number, s: Record<string, unknown>) => sum + (Number(s.sensor_value) || 0), 0);
+      const energyRecovered = (sensorData || []).filter((s: Record<string, unknown>) => s.sensor_type === 'temperature').reduce((sum: number, s: Record<string, unknown>) => sum + (Number(s.sensor_value) || 0), 0);
+      const embeddedCarbon = productOutput ? netGei / productOutput : 0;
+      const energyIntensity = productOutput ? (energyConsumed - energyRecovered) / productOutput * 1000 : 0;
+
+      const formData: Record<string, string> = {
+        'field_104_gross_emissions': grossEmissions.toFixed(4),
+        'field_105_credited_mitigation': creditedMitigation.toFixed(4),
+        'field_106_net_gei_score': netGei.toFixed(5),
+        'field_107_total_energy_consumed_kwh': energyConsumed.toFixed(2),
+        'field_108_energy_recovered_kwh': energyRecovered.toFixed(2),
+        'field_109_embedded_carbon_per_gram': embeddedCarbon.toFixed(6),
+        'field_110_energy_intensity_wh_per_kg': energyIntensity.toFixed(4),
+        'plant_name': plant.plant_name,
+        'plant_code': plant.plant_code,
+        'industry': plant.industry,
+        'methodology': plant.methodology,
+        'token_type': plant.token_type || '',
+        'scope_level': plant.scope_level,
+        'registry': plant.registry,
+        'vvb_name': userProfile?.company_name || '',
+        'submission_date': new Date().toISOString().slice(0, 10),
+        'compliance_status': embeddedCarbon <= 0.85 ? 'COMPLIANT' : 'NON_COMPLIANT',
+      };
+
+      setAutoFillData(formData);
+      setSuccess('AI auto-filled ICM Form A fields from sensor data and plant configuration.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Auto-fill failed'); }
+    finally { setAutoFillLoading(false); }
   }
 
   async function handleSubmitToRegistry() {
@@ -239,12 +289,40 @@ export default function AuditorDashboard() {
       )}
 
       {step === 'submit' && (
-        <div className="bg-white rounded-xl shadow p-6 max-w-3xl">
+        <div className="bg-white rounded-xl shadow p-6 max-w-4xl">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Submit Plant Data to Registry</h2>
           <div className="mb-4 flex items-center gap-3"><Fingerprint className="w-5 h-5 text-gray-400" /><AuthBadge status={anyRegistryCred ? 'authenticated' : 'pending'} label={anyRegistryCred ? 'VVB Authenticated' : 'VVB Not Authenticated'} /><Wifi className="w-5 h-5 text-gray-400 ml-4" /><AuthBadge status={anyRegistryCred ? 'authenticated' : 'pending'} label={anyRegistryCred ? 'Registry Connected' : 'Not Connected'} /></div>
           <div className="space-y-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-2">Select Plant (MAC Locked)</label><select value={selectedPlantCode} onChange={e => { setSelectedPlantCode(e.target.value); const p = plantConfigs.find(p => p.plant_code === e.target.value); if (p) setRegistry(p.registry); }} className="w-full border border-gray-300 rounded-lg px-4 py-2"><option value="">Select</option>{plantConfigs.filter(p => p.mac_address).map(p => <option key={p.id} value={p.plant_code}>{p.plant_name} — MAC: {p.mac_address}</option>)}</select></div>
-            <button onClick={handleSubmitToRegistry} disabled={loading || !selectedPlantCode || !anyRegistryCred} className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 font-medium flex items-center gap-2">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}Submit for Validation</button>
+
+            {/* AI Auto-Fill Section */}
+            <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-indigo-600" /><h3 className="text-sm font-semibold text-indigo-900">AI-Assisted Form Auto-Fill</h3></div>
+                <button onClick={handleAutoFillForm} disabled={autoFillLoading || !selectedPlantCode} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2">{autoFillLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}Auto-Fill Form A</button>
+              </div>
+              <p className="text-xs text-indigo-700 mb-3">Automatically populate ICM Form A fields from CIVV sensor data and plant configuration. Review and edit before submission.</p>
+              {Object.keys(autoFillData).length > 0 && (
+                <div className="mt-3 bg-white rounded-lg border border-indigo-200 overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-indigo-100 border-b border-indigo-200"><FileText className="w-4 h-4 text-indigo-600" /><span className="text-xs font-semibold text-indigo-900">ICM Form A — Auto-Filled Fields</span></div>
+                  <div className="max-h-64 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead><tr className="border-b border-gray-200"><th className="text-left py-2 px-3 font-medium text-gray-500">Field</th><th className="text-left py-2 px-3 font-medium text-gray-500">Auto-Filled Value</th></tr></thead>
+                      <tbody>
+                        {Object.entries(autoFillData).map(([key, value]) => (
+                          <tr key={key} className="border-b border-gray-100">
+                            <td className="py-1.5 px-3 font-mono text-gray-600">{key}</td>
+                            <td className="py-1.5 px-3 font-mono text-gray-900">{value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button onClick={handleSubmitToRegistry} disabled={loading || !selectedPlantCode || !anyRegistryCred} className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 font-medium flex items-center gap-2">{loading ? <Loader2 className="w-4 h-4 animate-gpin" /> : <Send className="w-4 h-4" />}Submit for Validation</button>
           </div>
         </div>
       )}

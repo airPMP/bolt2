@@ -1,24 +1,8 @@
 import { useState, useMemo } from 'react';
-import {
-  Calculator,
-  Plane,
-  Factory,
-  Leaf,
-  DollarSign,
-  TrendingUp,
-  AlertCircle,
-  Info,
-  Download,
-  RefreshCw,
-  ChevronDown,
-  ChevronRight,
-  Shield,
-  Building,
-  Zap,
-} from 'lucide-react';
-import { defraCalc, ashraeCalc, recCalc, nbsArrCalc } from '../../lib/calculator';
+import { Calculator, Plane, Factory, Leaf, DollarSign, TrendingUp, CircleAlert as AlertCircle, Info, Download, RefreshCw, ChevronDown, ChevronRight, Shield, Building, Zap } from 'lucide-react';
+import { defraCalc, ashraeCalc, recCalc, nbsArrCalc, cookstoveCalc } from '../../lib/calculator';
 
-type CalculationTab = 'black_defra' | 'black_ashrae' | 'green_re' | 'green_nbs' | 'corsia' | 'cbam' | 'biochar' | 'pnl' | 'methodology';
+type CalculationTab = 'black_defra' | 'black_ashrae' | 'green_re' | 'green_nbs' | 'green_cookstove' | 'corsia' | 'cbam' | 'biochar' | 'pnl' | 'methodology';
 
 interface CORSIAInputs {
   safProduction: number;
@@ -47,6 +31,20 @@ interface BiocharInputs {
   permanenceFactor: number;
   corcPrice: number;
 }
+
+interface CookstoveInputs {
+  fuelSavedTonnes: number;
+  emissionFactorFuel: number;
+  leakagePct: number;
+  cookstovePrice: number;
+}
+
+const defaultCookstove: CookstoveInputs = {
+  fuelSavedTonnes: 62.5,
+  emissionFactorFuel: 1.89,
+  leakagePct: 5,
+  cookstovePrice: 15,
+};
 
 interface PnLInputs {
   safProduction: number;
@@ -202,6 +200,7 @@ export default function GHGCalculator() {
   const [ashraeInputs, setAshraeInputs] = useState<AshraeInputs>(defaultAshrae);
   const [reInputs, setReInputs] = useState<REInputs>(defaultRE);
   const [nbsInputs, setNbsInputs] = useState<NbsInputs>(defaultNbs);
+  const [cookstoveInputs, setCookstoveInputs] = useState<CookstoveInputs>(defaultCookstove);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     assumptions: true,
     methodology: true
@@ -227,6 +226,17 @@ export default function GHGCalculator() {
     }));
     return nbsArrCalc('PLANT_TEST', trees);
   }, [nbsInputs]);
+
+  const cookstoveResults = useMemo(() => {
+    const result = cookstoveCalc('PLANT_TEST', {
+      B_fuel_saved: cookstoveInputs.fuelSavedTonnes,
+      EF_fuel: cookstoveInputs.emissionFactorFuel,
+      leakage: cookstoveInputs.leakagePct / 100,
+    });
+    const revenueUsd = result.emissionReductions_tco2e * cookstoveInputs.cookstovePrice;
+    const revenueInr = revenueUsd * pnlInputs.usdInrRate;
+    return { ...result, revenueUsd, revenueInr };
+  }, [cookstoveInputs, pnlInputs.usdInrRate]);
 
   const corsiaResults = useMemo(() => {
     const totalEnergy = corsiaInputs.safProduction * 1000 * corsiaInputs.safEnergyContent;
@@ -458,6 +468,7 @@ export default function GHGCalculator() {
     { id: 'black_ashrae' as const, label: 'Black: ASHRAE 228', icon: Building },
     { id: 'green_re' as const, label: 'Green: RE/REC', icon: Zap },
     { id: 'green_nbs' as const, label: 'Green: NbS ARR', icon: Leaf },
+    { id: 'green_cookstove' as const, label: 'Green: Cookstoves', icon: Leaf },
     { id: 'corsia' as const, label: 'CORSIA SAF', icon: Plane },
     { id: 'cbam' as const, label: 'CBAM/DRI', icon: Factory },
     { id: 'biochar' as const, label: 'Biochar CDR', icon: Leaf },
@@ -696,6 +707,112 @@ export default function GHGCalculator() {
                   AGB = 0.0673 × DBH^2.528 &nbsp;→&nbsp; C = biomass × 0.47 &nbsp;→&nbsp; CO₂e = C × 44/12
                 </div>
                 <div className="mt-2 text-xs text-gray-500">Methodology: {nbsResults.methodology} · Registry: {nbsResults.registry}</div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'green_cookstove' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <Leaf className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-emerald-900">Community Cookstoves Credit Calculator</h3>
+                    <p className="text-sm text-emerald-700 mt-1">Calculate emission reduction credits from improved cookstove distribution under Gold Standard TPDDTEC methodology.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleSection('cookstove_inputs')}>
+                    <h3 className="text-lg font-semibold text-gray-900">Input Parameters</h3>
+                    {expandedSections['cookstove_inputs'] !== false ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                  </div>
+                  {expandedSections['cookstove_inputs'] !== false && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputField
+                        label="Fuel Saved"
+                        value={cookstoveInputs.fuelSavedTonnes}
+                        onChange={(v) => setCookstoveInputs(prev => ({ ...prev, fuelSavedTonnes: v }))}
+                        unit="tonnes/year"
+                        tooltip="Annual non-renewable biomass fuel saved by improved cookstoves"
+                      />
+                      <InputField
+                        label="Emission Factor (Fuel)"
+                        value={cookstoveInputs.emissionFactorFuel}
+                        onChange={(v) => setCookstoveInputs(prev => ({ ...prev, emissionFactorFuel: v }))}
+                        unit="tCO2e/tonne"
+                        step={0.01}
+                        tooltip="Emission factor for non-renewable biomass fuel"
+                      />
+                      <InputField
+                        label="Leakage Rate"
+                        value={cookstoveInputs.leakagePct}
+                        onChange={(v) => setCookstoveInputs(prev => ({ ...prev, leakagePct: v }))}
+                        unit="%"
+                        step={0.5}
+                        tooltip="Leakage adjustment percentage per TPDDTEC methodology"
+                      />
+                      <InputField
+                        label="Credit Price"
+                        value={cookstoveInputs.cookstovePrice}
+                        onChange={(v) => setCookstoveInputs(prev => ({ ...prev, cookstovePrice: v }))}
+                        unit="USD/tCO2e"
+                        tooltip="Gold Standard VER market price"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Calculated Results</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <ResultCard
+                      label="Fuel Saved"
+                      value={cookstoveResults.fuel_saved_tonnes.toFixed(2)}
+                      unit="tonnes"
+                    />
+                    <ResultCard
+                      label="Emission Factor"
+                      value={cookstoveResults.emission_factor.toFixed(2)}
+                      unit="tCO2e/tonne"
+                    />
+                    <ResultCard
+                      label="Leakage Applied"
+                      value={`${cookstoveResults.leakage_pct.toFixed(1)}%`}
+                    />
+                    <ResultCard
+                      label="Emission Reductions"
+                      value={cookstoveResults.emissionReductions_tco2e.toFixed(4)}
+                      unit="tCO2e/year"
+                      highlight
+                      trend="up"
+                    />
+                    <ResultCard
+                      label="Annual Revenue (USD)"
+                      value={formatCurrency(cookstoveResults.revenueUsd, 'USD')}
+                      highlight
+                    />
+                    <ResultCard
+                      label="Annual Revenue (INR)"
+                      value={formatCurrency(cookstoveResults.revenueInr)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="w-4 h-4 text-gray-500" />
+                  <h4 className="text-sm font-semibold text-gray-700">TPDDTEC Formula</h4>
+                </div>
+                <div className="p-3 bg-white rounded-lg font-mono text-sm">
+                  ER = B_fuel_saved × EF_fuel × (1 − leakage) tCO2e/year
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  Methodology: {cookstoveResults.methodology} · Registry: {cookstoveResults.registry}
+                </div>
               </div>
             </div>
           )}
