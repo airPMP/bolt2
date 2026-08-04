@@ -190,3 +190,78 @@ export interface BoqItem {
   category: string;
   created_at: string;
 }
+
+export type ScopeCategory = 'scope1' | 'scope2' | 'scope3';
+export type ReviewStatus = 'draft' | 'pending_validation' | 'approved_auditor' | 'rejected';
+export type ESGFramework = 'GRI' | 'BRSR' | 'CDP' | 'CSRD';
+export type DataSource = 'CIVV' | 'Manual' | 'Airbyte';
+
+export interface RawActivityLedger {
+  id: string;
+  user_id: string;
+  organization_id: string | null;
+  recorded_at: string;
+  activity_window_start: string | null;
+  activity_window_end: string | null;
+  scope_category: ScopeCategory;
+  activity_type: string;
+  raw_quantity: number;
+  measurement_unit: string;
+  blockchain_tx_hash: string | null;
+  source: DataSource;
+  metadata: Json;
+  created_at: string;
+}
+
+export interface CarbonEmissionsFactor {
+  id: number;
+  activity_type: string;
+  factor_value_co2e: number;
+  measurement_unit: string;
+  geographic_region: string;
+  regulatory_year: number;
+  data_source_citation: string | null;
+}
+
+export interface ReportFrameworkAlignment {
+  id: number;
+  record_id: string;
+  user_id: string;
+  gri_indicator_id: string | null;
+  brsr_indicator_id: string | null;
+  sbti_target_id: string | null;
+  csrd_indicator_id: string | null;
+  cdp_indicator_id: string | null;
+  calculated_tco2e: number | null;
+  review_status: ReviewStatus;
+  last_modified_by: string | null;
+  updated_at: string;
+}
+
+export interface MaterialityAssessment {
+  id: string;
+  user_id: string;
+  organization_id: string | null;
+  topic: string;
+  impact_score: number;
+  likelihood_score: number;
+  rationale: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface DisclosureItem {
+  id: string;
+  user_id: string;
+  organization_id: string | null;
+  framework: ESGFramework;
+  indicator: string;
+  indicator_name: string | null;
+  value_text: string | null;
+  value_numeric: number | null;
+  unit: string | null;
+  source: DataSource;
+  review_status: ReviewStatus;
+  last_modified_by: string | null;
+  updated_at: string;
+}

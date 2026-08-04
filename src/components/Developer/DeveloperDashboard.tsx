@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Building2, Send, Coins, TrendingUp, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Zap, Clock, Database, Wifi } from 'lucide-react';
+import { Building2, Send, Coins, TrendingUp, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Zap, Clock, Database, Wifi, FileText } from 'lucide-react';
+import ESGDashboard from '../Shared/ESGDashboard';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { REGISTRIES } from '../../data/registries';
@@ -9,7 +10,7 @@ import AuthBadge from '../Shared/AuthBadge';
 import AuthStampPanel from '../Shared/AuthStampPanel';
 import type { AuthStamp, PlantConfig, PersonaCredential, DataSubmission, TokenMint, ExchangeListing, Wallet, ProjectStatus } from '../../types';
 
-type DevTab = 'overview' | 'credentials' | 'submit' | 'mint' | 'exchange' | 'wallet';
+type DevTab = 'overview' | 'credentials' | 'submit' | 'mint' | 'exchange' | 'wallet' | 'esg';
 
 export default function DeveloperDashboard() {
   const { user } = useAuth();
@@ -118,6 +119,7 @@ export default function DeveloperDashboard() {
     { id: 'overview', label: 'Overview', icon: Building2 }, { id: 'credentials', label: 'Registry Auth', icon: Fingerprint },
     { id: 'submit', label: 'Push 15-min Data', icon: Send }, { id: 'mint', label: 'Mint Tokens', icon: Coins },
     { id: 'exchange', label: 'Exchange Auth & List', icon: TrendingUp }, { id: 'wallet', label: 'My Wallet', icon: Database },
+    { id: 'esg', label: 'ESG Reporting', icon: FileText },
   ];
 
   return (
@@ -210,6 +212,8 @@ export default function DeveloperDashboard() {
           <div><h3 className="text-sm font-semibold text-gray-700 mb-2">Token History</h3><div className="space-y-2">{tokenMints.map(m => <div key={m.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div className="flex items-center gap-2"><Zap className="w-4 h-4 text-amber-500" /><span className="text-sm">{m.quantity} {m.token_type}</span><span className="text-xs text-gray-500">{new Date(m.minted_at).toLocaleString('en-IN')}</span></div><AuthBadge status={m.mint_status === 'minted' ? 'authenticated' : 'failed'} label={m.mint_status} size="sm" /></div>)}{tokenMints.length === 0 && <p className="text-sm text-gray-400">No tokens yet</p>}</div></div>
         </div>
       )}
+
+      {tab === 'esg' && <ESGDashboard />}
     </div>
   );
 }

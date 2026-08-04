@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShoppingCart, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Wallet, TrendingUp, Building } from 'lucide-react';
+import { ShoppingCart, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Wallet, TrendingUp, Building, FileText } from 'lucide-react';
+import ESGDashboard from '../Shared/ESGDashboard';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { REGISTRIES } from '../../data/registries';
@@ -9,7 +10,7 @@ import AuthBadge from '../Shared/AuthBadge';
 import AuthStampPanel from '../Shared/AuthStampPanel';
 import type { AuthStamp, PersonaCredential, ExchangeListing, Wallet as WalletType } from '../../types';
 
-type BuyerTab = 'overview' | 'credentials' | 'buy' | 'history';
+type BuyerTab = 'overview' | 'credentials' | 'buy' | 'history' | 'esg';
 
 export default function BuyerDashboard() {
   const { user } = useAuth();
@@ -69,6 +70,7 @@ export default function BuyerDashboard() {
   const tabs: { id: BuyerTab; label: string; icon: typeof ShoppingCart }[] = [
     { id: 'overview', label: 'Overview', icon: ShoppingCart }, { id: 'credentials', label: 'Credentials', icon: Fingerprint },
     { id: 'buy', label: 'Buy Credits', icon: TrendingUp }, { id: 'history', label: 'History', icon: Wallet },
+    { id: 'esg', label: 'ESG Reporting', icon: FileText },
   ];
 
   return (
@@ -129,6 +131,8 @@ export default function BuyerDashboard() {
           <div className="space-y-2">{stamps.filter(s => s.provider_type === 'purchase').map(s => <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div className="flex items-center gap-3"><ShoppingCart className="w-4 h-4 text-purple-500" /><div><span className="text-sm font-medium">Purchase on {EXCHANGES.find(e => e.id === s.provider)?.name || s.provider}</span><span className="text-xs text-gray-500 ml-2">{new Date(s.stamped_at).toLocaleString('en-IN')}</span></div></div><div className="flex items-center gap-2"><span className="text-xs font-mono text-gray-400">#{s.stamp_hash?.slice(0, 12)}</span><AuthBadge status="authenticated" label="Stamped" size="sm" /></div></div>)}{stamps.filter(s => s.provider_type === 'purchase').length === 0 && <p className="text-sm text-gray-400">No purchases yet</p>}</div>
         </div>
       )}
+
+      {tab === 'esg' && <ESGDashboard />}
     </div>
   );
 }

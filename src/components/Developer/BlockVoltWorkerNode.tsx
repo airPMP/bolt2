@@ -1,34 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Sun,
-  Wind,
-  Leaf,
-  Factory,
-  TreePine,
-  Droplets,
-  Building2,
-  Activity,
-  Server,
-  Cpu,
-  Wifi,
-  Lock,
-  FileJson,
-  CheckCircle,
-  AlertTriangle as _AlertTriangle,
-  Zap,
-  Thermometer as _Thermometer,
-  Gauge as _Gauge,
-  Radio as _Radio,
-  MapPin,
-  Clock,
-  RefreshCw,
-  Download,
-  ChevronDown,
-  ChevronRight,
-  ArrowRight,
-  Database,
-  Shield
-} from 'lucide-react';
+import { Sun, Wind, Leaf, Factory, TreePine, Droplets, Building2, Activity, Server, Cpu, Wifi, Lock, File as FileJson, CircleCheck as CheckCircle, TriangleAlert as _AlertTriangle, Zap, Thermometer as _Thermometer, Gauge as _Gauge, Radio as _Radio, MapPin, Clock, RefreshCw, Download, ChevronDown, ChevronRight, ArrowRight, Database, Shield } from 'lucide-react';
 
 // ==================== TYPE DEFINITIONS ====================
 
@@ -454,7 +425,7 @@ export default function BlockVoltWorkerNode() {
 
   // Auto-run simulation
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     if (isRunning) {
       runCycle();
       interval = setInterval(runCycle, 5000); // Every 5 seconds for demo
