@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Building2, Send, Coins, TrendingUp, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Zap, Clock, Database, Wifi, FileText, Activity, Layers, FlaskConical, Bell } from 'lucide-react';
+import { Building2, Send, Coins, TrendingUp, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Zap, Clock, Database, Wifi, FileText, Activity, Layers, FlaskConical, Bell, Globe, Flame, Leaf, ShieldCheck } from 'lucide-react';
 import ESGDashboard from '../Shared/ESGDashboard';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,9 +8,9 @@ import { EXCHANGES } from '../../data/exchanges';
 import CredentialTester from '../Shared/CredentialTester';
 import AuthBadge from '../Shared/AuthBadge';
 import AuthStampPanel from '../Shared/AuthStampPanel';
-import type { AuthStamp, PlantConfig, PersonaCredential, DataSubmission, TokenMint, ExchangeListing, Wallet, ProjectStatus, DvmModel, DvmModelRun, DvmEvent, DvmRuleResult, DvmLedger } from '../../types';
+import type { AuthStamp, PlantConfig, PersonaCredential, DataSubmission, TokenMint, ExchangeListing, Wallet, ProjectStatus, DvmModel, DvmModelRun, DvmEvent, DvmRuleResult, DvmLedger, MizanCivvRecord, MizanToken } from '../../types';
 
-type DevTab = 'overview' | 'credentials' | 'submit' | 'mint' | 'exchange' | 'wallet' | 'esg' | 'dvm';
+type DevTab = 'overview' | 'credentials' | 'submit' | 'mint' | 'exchange' | 'wallet' | 'esg' | 'dvm' | 'mizan';
 
 export default function DeveloperDashboard() {
   const { user } = useAuth();
@@ -46,6 +46,15 @@ export default function DeveloperDashboard() {
   const [dvmRuleName, setDvmRuleName] = useState('');
   const [dvmRuleExpr, setDvmRuleExpr] = useState('');
   const [dvmRuleMsg, setDvmRuleMsg] = useState('');
+  const [mizanRecords, setMizanRecords] = useState<MizanCivvRecord[]>([]);
+  const [mizanTokens, setMizanTokens] = useState<MizanToken[]>([]);
+  const [mizanFacilityId, setMizanFacilityId] = useState('OM-SOHAR-PETROCHEM-04');
+  const [mizanTpmId, setMizanTpmId] = useState('ATECC608B-OMAN-8891');
+  const [mizanGovernorate, setMizanGovernorate] = useState('North Al Batinah');
+  const [mizanCo2Flow, setMizanCo2Flow] = useState(12.5);
+  const [mizanStackTemp, setMizanStackTemp] = useState(420.15);
+  const [mizanCcsRecovery, setMizanCcsRecovery] = useState(4.0);
+  const [mizanProcessing, setMizanProcessing] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -78,6 +87,12 @@ export default function DeveloperDashboard() {
       if (events.data) setDvmEvents(events.data);
       if (alerts.data) setDvmAlerts(alerts.data);
       if (ledgers.data) setDvmLedgers(ledgers.data);
+      const [mizanRecs, mizanToks] = await Promise.all([
+        supabase.from('mizan_civv_records').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+        supabase.from('mizan_tokens').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
+      ]);
+      if (mizanRecs.data) setMizanRecords(mizanRecs.data);
+      if (mizanToks.data) setMizanTokens(mizanToks.data);
     }
   }, [user]);
 
@@ -149,6 +164,7 @@ export default function DeveloperDashboard() {
     { id: 'exchange', label: 'Exchange Auth & List', icon: TrendingUp }, { id: 'wallet', label: 'My Wallet', icon: Database },
     { id: 'esg', label: 'ESG Reporting', icon: FileText },
     { id: 'dvm', label: 'dMRV Data Model', icon: Activity },
+    { id: 'mizan', label: 'Mizan CIVV', icon: Globe },
   ];
 
   return (
@@ -387,6 +403,111 @@ export default function DeveloperDashboard() {
             <div className='bg-white rounded-xl shadow p-6'>
               <h3 className='text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2'><Database className='w-4 h-4 text-teal-500' /> Ledgers ({dvmLedgers.length})</h3>
               <div className='space-y-2'>{dvmLedgers.map(l => <div key={l.id} className='flex items-center justify-between p-2 bg-gray-50 rounded text-xs'><span className='font-medium text-gray-700'>{l.name}</span><span className='text-gray-500'>{l.balance} {l.unit}</span></div>)}{dvmLedgers.length === 0 && <p className='text-sm text-gray-400'>No ledgers yet</p>}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'mizan' && (
+        <div className='space-y-6'>
+          {/* Omani Mizan CIVV Engine */}
+          <div className='bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl shadow p-6 max-w-4xl border border-emerald-200'>
+            <div className='flex items-center gap-3 mb-2'>
+              <Globe className='w-6 h-6 text-emerald-700' />
+              <h2 className='text-xl font-bold text-gray-900'>Omani Mizan CIVV Engine</h2>
+              <span className='px-2 py-0.5 bg-emerald-600 text-white text-xs rounded-full font-medium'>Oman Net Zero 2050</span>
+            </div>
+            <p className='text-gray-700 mb-4 text-sm'>Ingest industrial historian streams (AVEVA PI / Honeywell PHD), validate thermodynamic data, and mint Black Tokens (emissions liability) + Green Tokens (verified removals) via Wrapped dRMV protocol.</p>
+
+            <div className='grid grid-cols-2 gap-4 mb-4'>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Facility ID</label><input value={mizanFacilityId} onChange={e => setMizanFacilityId(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm' placeholder='OM-SOHAR-PETROCHEM-04' /></div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>TPM Device ID</label><input value={mizanTpmId} onChange={e => setMizanTpmId(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm' placeholder='ATECC608B-OMAN-8891' /></div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Governorate</label>
+                <select value={mizanGovernorate} onChange={e => setMizanGovernorate(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm'>
+                  <option>North Al Batinah</option><option>South Al Batinah</option><option>Al Wusta</option><option>Dhofar</option><option>Muscat</option>
+                </select>
+              </div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Plant (optional)</label>
+                <select value={selectedPlantId} onChange={e => setSelectedPlantId(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm'><option value=''>None</option>{validatedPlants.map(p => <option key={p.id} value={p.id}>{p.plant_name}</option>)}</select>
+              </div>
+            </div>
+
+            <div className='bg-white rounded-lg p-4 border border-gray-200 mb-4'>
+              <h3 className='text-sm font-semibold text-gray-700 mb-3'>Historian Tags (PI / PHD)</h3>
+              <div className='grid grid-cols-3 gap-4'>
+                <div><label className='block text-xs text-gray-500 mb-1'>PI_TAG_CO2_MASS_FLOW (kg/s)</label><input type='number' step='0.1' value={mizanCo2Flow} onChange={e => setMizanCo2Flow(Number(e.target.value))} className='w-full border border-gray-300 rounded-lg px-3 py-2 text-sm' /></div>
+                <div><label className='block text-xs text-gray-500 mb-1'>PI_TAG_STACK_TEMP_K</label><input type='number' step='0.1' value={mizanStackTemp} onChange={e => setMizanStackTemp(Number(e.target.value))} className='w-full border border-gray-300 rounded-lg px-3 py-2 text-sm' /></div>
+                <div><label className='block text-xs text-gray-500 mb-1'>PI_TAG_CCS_RECOVERY_KG_S</label><input type='number' step='0.1' value={mizanCcsRecovery} onChange={e => setMizanCcsRecovery(Number(e.target.value))} className='w-full border border-gray-300 rounded-lg px-3 py-2 text-sm' /></div>
+              </div>
+            </div>
+
+            {/* Computed preview */}
+            <div className='grid grid-cols-3 gap-3 mb-4'>
+              <div className='bg-red-50 border border-red-200 rounded-lg p-3 text-center'><Flame className='w-5 h-5 text-red-500 mx-auto mb-1' /><div className='text-xs text-red-600'>Gross Emitted</div><div className='text-lg font-bold text-red-700'>{((mizanCo2Flow * 3600) / 1000).toFixed(2)} <span className='text-xs'>tCO2/hr</span></div></div>
+              <div className='bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center'><Leaf className='w-5 h-5 text-emerald-500 mx-auto mb-1' /><div className='text-xs text-emerald-600'>Captured (CCS)</div><div className='text-lg font-bold text-emerald-700'>{((mizanCcsRecovery * 3600) / 1000).toFixed(2)} <span className='text-xs'>tCO2/hr</span></div></div>
+              <div className='bg-amber-50 border border-amber-200 rounded-lg p-3 text-center'><ShieldCheck className='w-5 h-5 text-amber-500 mx-auto mb-1' /><div className='text-xs text-amber-600'>Net Emitted</div><div className='text-lg font-bold text-amber-700'>{Math.max(0, ((mizanCo2Flow * 3600) / 1000) - ((mizanCcsRecovery * 3600) / 1000)).toFixed(2)} <span className='text-xs'>tCO2/hr</span></div></div>
+            </div>
+
+            <button onClick={async () => {
+              if (!user) return;
+              setMizanProcessing(true); setError(''); setSuccess('');
+              try {
+                const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dvm-mizan-civv`;
+                const res = await fetch(apiUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+                  body: JSON.stringify({ plant_config_id: selectedPlantId || null, user_id: user.id, facility_id: mizanFacilityId, tpm_device_id: mizanTpmId, governorate: mizanGovernorate, dispatch_to_mizan: true, historian_data: { timestamp: Math.floor(Date.now() / 1000), PI_TAG_CO2_MASS_FLOW: mizanCo2Flow, PI_TAG_STACK_TEMP_K: mizanStackTemp, PI_TAG_CCS_RECOVERY_KG_S: mizanCcsRecovery } }),
+                });
+                if (!res.ok) throw new Error(`CIVV processing failed (${res.status})`);
+                const result = await res.json();
+                if (result.error) throw new Error(result.error);
+                setSuccess(`Verified: ${result.tokens_minted.length} tokens minted. Black: ${result.wrapped_drmv.mint_black_tokens} tCO2e, Green: ${result.wrapped_drmv.mint_green_tokens} tCO2e. Dispatched to Mizan.`);
+                await loadData();
+              } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+              finally { setMizanProcessing(false); }
+            }} disabled={mizanProcessing || !mizanFacilityId || !user} className='px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 font-medium flex items-center gap-2'>
+              {mizanProcessing ? <Loader2 className='w-4 h-4 animate-spin' /> : <Globe className='w-4 h-4' />} Process &amp; Dispatch to Mizan
+            </button>
+          </div>
+
+          {/* Token balance summary */}
+          <div className='grid grid-cols-2 gap-4'>
+            <div className='bg-white rounded-xl shadow p-5'>
+              <div className='flex items-center gap-2 mb-3'><Flame className='w-5 h-5 text-red-500' /><h3 className='text-sm font-semibold text-gray-700'>Black Tokens (dRMV-B)</h3></div>
+              <div className='text-3xl font-bold text-red-600'>{mizanTokens.filter(t => t.token_class === 'BLACK').reduce((s, t) => s + Number(t.quantity), 0).toFixed(2)}</div>
+              <div className='text-xs text-gray-500 mt-1'>tCO2e emissions liability</div>
+              <div className='mt-2 text-xs text-gray-400'>{mizanTokens.filter(t => t.token_class === 'BLACK').length} mint events</div>
+            </div>
+            <div className='bg-white rounded-xl shadow p-5'>
+              <div className='flex items-center gap-2 mb-3'><Leaf className='w-5 h-5 text-emerald-500' /><h3 className='text-sm font-semibold text-gray-700'>Green Tokens (dRMV-G)</h3></div>
+              <div className='text-3xl font-bold text-emerald-600'>{mizanTokens.filter(t => t.token_class === 'GREEN').reduce((s, t) => s + Number(t.quantity), 0).toFixed(2)}</div>
+              <div className='text-xs text-gray-500 mt-1'>tCO2e verified removals</div>
+              <div className='mt-2 text-xs text-gray-400'>{mizanTokens.filter(t => t.token_class === 'GREEN').length} mint events</div>
+            </div>
+          </div>
+
+          {/* Recent CIVV records */}
+          <div className='bg-white rounded-xl shadow p-6 max-w-4xl'>
+            <h3 className='text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2'><Activity className='w-4 h-4 text-emerald-500' /> Recent CIVV Records</h3>
+            <div className='space-y-2 max-h-64 overflow-y-auto'>
+              {mizanRecords.map(r => (
+                <div key={r.id} className='flex items-center justify-between p-3 bg-gray-50 rounded-lg text-xs'>
+                  <div className='flex items-center gap-3'>
+                    <Globe className='w-4 h-4 text-emerald-500' />
+                    <div>
+                      <div className='font-medium text-gray-700'>{r.facility_id}</div>
+                      <div className='text-gray-400'>{new Date(r.timestamp).toLocaleString('en-IN')} — Hash: {r.civv_hash_proof?.slice(0, 16)}…</div>
+                    </div>
+                  </div>
+                  <div className='flex items-center gap-3'>
+                    <span className='text-red-600'>B: {Number(r.net_emitted_tco2_hr).toFixed(1)}</span>
+                    <span className='text-emerald-600'>G: {Number(r.captured_ccs_tco2_hr).toFixed(1)}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs ${r.mizan_dispatch_status === 'DISPATCHED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{r.mizan_dispatch_status}</span>
+                    {r.article_6_2_itmo_eligible && <span className='px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs'>ITMO</span>}
+                  </div>
+                </div>
+              ))}
+              {mizanRecords.length === 0 && <p className='text-sm text-gray-400'>No CIVV records yet</p>}
             </div>
           </div>
         </div>

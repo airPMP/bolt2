@@ -280,6 +280,52 @@ export interface DvmCreditInventory {
   created_at: string;
 }
 
+// ============================================================
+// Mizan CIVV Engine (Oman Net Zero Centre Integration)
+// ============================================================
+
+export type MizanDispatchStatus = 'PENDING' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'FAILED';
+export type MizanTokenClass = 'BLACK' | 'GREEN';
+export type MizanTokenStatus = 'MINTED' | 'SETTLED' | 'TRANSFERRED' | 'RETIRED';
+
+export interface MizanCivvRecord {
+  id: string;
+  plant_config_id: string | null;
+  user_id: string;
+  facility_id: string;
+  tpm_device_id: string | null;
+  governorate: string;
+  country: string;
+  timestamp: string;
+  co2_mass_flow_kg_s: number;
+  stack_temp_k: number | null;
+  ccs_captured_kg_s: number;
+  gross_emitted_tco2_hr: number;
+  captured_ccs_tco2_hr: number;
+  net_emitted_tco2_hr: number;
+  civv_hash_proof: string | null;
+  oman_net_zero_2050_aligned: boolean;
+  article_6_2_itmo_eligible: boolean;
+  jsonld_payload: Json;
+  mizan_dispatch_status: MizanDispatchStatus;
+  mizan_dispatch_response: Json | null;
+  dispatched_at: string | null;
+  created_at: string;
+}
+
+export interface MizanToken {
+  id: string;
+  record_id: string;
+  user_id: string;
+  token_class: MizanTokenClass;
+  quantity: number;
+  unit: string;
+  settlement_status: MizanTokenStatus;
+  article_6_2_eligible: boolean;
+  mizan_registry_ref: string | null;
+  created_at: string;
+}
+
 export interface CommunityMethodology {
   id: string;
   contributor_id: string;

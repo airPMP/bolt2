@@ -33,3 +33,6 @@ verify_jwt = false
 
 [functions.dvm-registry-issue]
 verify_jwt = false
+
+[functions.dvm-mizan-civv]
+verify_jwt = false
