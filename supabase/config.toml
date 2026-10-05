@@ -1,0 +1,32 @@
+[functions.boq]
+verify_jwt = false
+
+[functions.calculate]
+verify_jwt = false
+
+[functions.esg-engine]
+verify_jwt = false
+
+[functions.exchange-proxy]
+verify_jwt = false
+
+[functions.iex-market]
+verify_jwt = false
+
+[functions.methodology-engine]
+verify_jwt = false
+
+[functions.registry-proxy]
+verify_jwt = false
+
+[functions.registry-submit]
+verify_jwt = false
+
+[functions.wallet]
+verify_jwt = false
+
+[functions.dvm-ingest]
+verify_jwt = false
+
+[functions.dvm-model-run]
+verify_jwt = false

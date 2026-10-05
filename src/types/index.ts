@@ -129,6 +129,157 @@ export interface ExchangeListing {
   listed_at: string;
 }
 
+// ============================================================
+// dMRV Data Model (Mangrove-compatible)
+// ============================================================
+
+export type DvmDataType = 'NUMERIC' | 'TEXT' | 'GEO' | 'FILE' | 'BOOLEAN';
+export type DvmModelRunState = 'PENDING' | 'RUNNING' | 'COMPLETE' | 'FAILED';
+export type DvmBatchType = 'INPUT' | 'PRODUCTION' | 'OUTPUT';
+export type DvmBatchStatus = 'PENDING' | 'COMPLETE' | 'FLAGGED' | 'APPROVED';
+export type DvmRuleAction = 'ALERT' | 'SUBSTITUTE' | 'BLOCK';
+export type DvmCreditStatus = 'ACTIVE' | 'RESERVED' | 'DELIVERED' | 'RETIRED';
+
+export interface DvmEventType {
+  id: string;
+  plant_config_id: string;
+  user_id: string;
+  name: string;
+  slug: string;
+  cadence: string | null;
+  created_at: string;
+}
+
+export interface DvmDatapointType {
+  id: string;
+  event_type_id: string;
+  name: string;
+  slug: string;
+  unit: string;
+  data_type: DvmDataType;
+  uncertainty: number;
+  uncertainty_type: 'ABSOLUTE' | 'RELATIVE' | null;
+  evidence_check: boolean;
+  created_at: string;
+}
+
+export interface DvmEvent {
+  id: string;
+  event_type_id: string;
+  plant_config_id: string;
+  user_id: string;
+  timestamp: string;
+  metadata: Json;
+  created_at: string;
+}
+
+export interface DvmDatapoint {
+  id: string;
+  event_id: string;
+  datapoint_type_id: string;
+  numeric_value: number | null;
+  text_value: string | null;
+  geo_value: Json | null;
+  file_value: string | null;
+  unit: string;
+  uncertainty: number;
+  hsm_signature: string | null;
+  gateway_mac: string | null;
+  merkle_proof: Json | null;
+  captured_at: string;
+  created_at: string;
+}
+
+export interface DvmModel {
+  id: string;
+  plant_config_id: string;
+  user_id: string;
+  name: string;
+  slug: string;
+  version: number;
+  yaml_definition: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface DvmModelRun {
+  id: string;
+  model_id: string;
+  user_id: string;
+  start_time: string;
+  end_time: string;
+  state: DvmModelRunState;
+  error_message: string | null;
+  calculations: Json;
+  outputs: Json;
+  uncertainty: Json;
+  created_at: string;
+}
+
+export interface DvmLedger {
+  id: string;
+  plant_config_id: string;
+  user_id: string;
+  name: string;
+  slug: string;
+  unit: string;
+  balance: number;
+  created_at: string;
+}
+
+export interface DvmBatch {
+  id: string;
+  ledger_id: string;
+  user_id: string;
+  batch_type: DvmBatchType;
+  start_time: string;
+  end_time: string;
+  inputs: Json;
+  outputs: Json;
+  calculations: Json;
+  uncertainty: number | null;
+  status: DvmBatchStatus;
+  created_at: string;
+}
+
+export interface DvmDataRule {
+  id: string;
+  plant_config_id: string;
+  user_id: string;
+  name: string;
+  expression: string;
+  action: DvmRuleAction;
+  alert_message: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface DvmRuleResult {
+  id: string;
+  rule_id: string;
+  user_id: string;
+  target_type: string;
+  target_id: string | null;
+  message: string;
+  dismissed: boolean;
+  dismissed_at: string | null;
+  created_at: string;
+}
+
+export interface DvmCreditInventory {
+  id: string;
+  plant_config_id: string;
+  user_id: string;
+  issuance_ref: string | null;
+  credit_type: string;
+  quantity: number;
+  vintage: string | null;
+  registry_ref: string | null;
+  serial_numbers: Json;
+  status: DvmCreditStatus;
+  created_at: string;
+}
+
 export interface CommunityMethodology {
   id: string;
   contributor_id: string;

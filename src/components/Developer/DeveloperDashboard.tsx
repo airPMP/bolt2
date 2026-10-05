@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Building2, Send, Coins, TrendingUp, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Zap, Clock, Database, Wifi, FileText } from 'lucide-react';
+import { Building2, Send, Coins, TrendingUp, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Zap, Clock, Database, Wifi, FileText, Activity, Layers, FlaskConical, Bell } from 'lucide-react';
 import ESGDashboard from '../Shared/ESGDashboard';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,9 +8,9 @@ import { EXCHANGES } from '../../data/exchanges';
 import CredentialTester from '../Shared/CredentialTester';
 import AuthBadge from '../Shared/AuthBadge';
 import AuthStampPanel from '../Shared/AuthStampPanel';
-import type { AuthStamp, PlantConfig, PersonaCredential, DataSubmission, TokenMint, ExchangeListing, Wallet, ProjectStatus } from '../../types';
+import type { AuthStamp, PlantConfig, PersonaCredential, DataSubmission, TokenMint, ExchangeListing, Wallet, ProjectStatus, DvmModel, DvmModelRun, DvmEvent, DvmRuleResult, DvmLedger } from '../../types';
 
-type DevTab = 'overview' | 'credentials' | 'submit' | 'mint' | 'exchange' | 'wallet' | 'esg';
+type DevTab = 'overview' | 'credentials' | 'submit' | 'mint' | 'exchange' | 'wallet' | 'esg' | 'dvm';
 
 export default function DeveloperDashboard() {
   const { user } = useAuth();
@@ -32,6 +32,20 @@ export default function DeveloperDashboard() {
   const [listQuantity, setListQuantity] = useState(0);
   const [listPrice, setListPrice] = useState(0);
   const [selectedRegistry, setSelectedRegistry] = useState('');
+  const [dvmModels, setDvmModels] = useState<DvmModel[]>([]);
+  const [dvmModelRuns, setDvmModelRuns] = useState<DvmModelRun[]>([]);
+  const [dvmEvents, setDvmEvents] = useState<DvmEvent[]>([]);
+  const [dvmAlerts, setDvmAlerts] = useState<DvmRuleResult[]>([]);
+  const [dvmLedgers, setDvmLedgers] = useState<DvmLedger[]>([]);
+  const [dvmIngestMac, setDvmIngestMac] = useState('');
+  const [dvmIngesting, setDvmIngesting] = useState(false);
+  const [dvmJsonInput, setDvmJsonInput] = useState('');
+  const [dvmModelYaml, setDvmModelYaml] = useState('');
+  const [dvmModelName, setDvmModelName] = useState('');
+  const [dvmRunModelId, setDvmRunModelId] = useState('');
+  const [dvmRuleName, setDvmRuleName] = useState('');
+  const [dvmRuleExpr, setDvmRuleExpr] = useState('');
+  const [dvmRuleMsg, setDvmRuleMsg] = useState('');
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -51,6 +65,20 @@ export default function DeveloperDashboard() {
     if (mints.data) setTokenMints(mints.data);
     if (listings.data) setExchangeListings(listings.data);
     if (wal.data) setWallet(wal.data);
+    if (user) {
+      const [models, runs, events, alerts, ledgers] = await Promise.all([
+        supabase.from('dvm_models').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('dvm_model_runs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+        supabase.from('dvm_events').select('*').eq('user_id', user.id).order('timestamp', { ascending: false }).limit(20),
+        supabase.from('dvm_rule_results').select('*').eq('user_id', user.id).eq('dismissed', false).order('created_at', { ascending: false }).limit(20),
+        supabase.from('dvm_ledgers').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+      ]);
+      if (models.data) setDvmModels(models.data);
+      if (runs.data) setDvmModelRuns(runs.data);
+      if (events.data) setDvmEvents(events.data);
+      if (alerts.data) setDvmAlerts(alerts.data);
+      if (ledgers.data) setDvmLedgers(ledgers.data);
+    }
   }, [user]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -120,6 +148,7 @@ export default function DeveloperDashboard() {
     { id: 'submit', label: 'Push 15-min Data', icon: Send }, { id: 'mint', label: 'Mint Tokens', icon: Coins },
     { id: 'exchange', label: 'Exchange Auth & List', icon: TrendingUp }, { id: 'wallet', label: 'My Wallet', icon: Database },
     { id: 'esg', label: 'ESG Reporting', icon: FileText },
+    { id: 'dvm', label: 'dMRV Data Model', icon: Activity },
   ];
 
   return (
@@ -214,6 +243,154 @@ export default function DeveloperDashboard() {
       )}
 
       {tab === 'esg' && <ESGDashboard />}
+
+      {tab === 'dvm' && (
+        <div className='space-y-6'>
+          {/* Ingest sensor data via gateway */}
+          <div className='bg-white rounded-xl shadow p-6 max-w-4xl'>
+            <h2 className='text-xl font-bold text-gray-900 mb-2 flex items-center gap-2'><Wifi className='w-5 h-5 text-blue-600' /> Gateway Data Ingestion</h2>
+            <p className='text-gray-600 mb-4 text-sm'>Send 15-min interval JSON from CIVV gateway. Data is parsed into events + datapoints, and rules are evaluated automatically.</p>
+            <div className='space-y-3'>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Select Plant</label>
+                <select value={selectedPlantId} onChange={e => { setSelectedPlantId(e.target.value); const p = plantConfigs.find(pp => pp.id === e.target.value); setDvmIngestMac(p?.mac_address || ''); }} className='w-full border border-gray-300 rounded-lg px-4 py-2'>
+                  <option value=''>Select</option>
+                  {validatedPlants.map(p => <option key={p.id} value={p.id}>{p.plant_name} — MAC: {p.mac_address}</option>)}
+                </select>
+              </div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Gateway MAC</label>
+                <input value={dvmIngestMac} onChange={e => setDvmIngestMac(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2' placeholder='AA:BB:CC:DD:EE:01' />
+              </div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Sensor JSON Payload</label>
+                <textarea value={dvmJsonInput} onChange={e => setDvmJsonInput(e.target.value)} rows={6} className='w-full border border-gray-300 rounded-lg px-4 py-2 font-mono text-xs' placeholder='{"power_consumption_kwh": 4500, "flow_rate_m3h": 85.5, "temperature_c": 45.2, "gas_concentration_ppm": 55.3, "humidity_pct": 55.0, "irradiance_wm2": 0}' />
+              </div>
+              <button onClick={async () => {
+                if (!user || !selectedPlantId || !dvmIngestMac) return;
+                setDvmIngesting(true); setError(''); setSuccess('');
+                try {
+                  let sensorData: Record<string, unknown>;
+                  try { sensorData = dvmJsonInput.trim() ? JSON.parse(dvmJsonInput) : {
+                    power_consumption_kwh: (Math.random() * 5000 + 2000).toFixed(2),
+                    flow_rate_m3h: (Math.random() * 100 + 50).toFixed(2),
+                    temperature_c: (Math.random() * 50 + 20).toFixed(1),
+                    gas_concentration_ppm: (Math.random() * 100 + 10).toFixed(1),
+                    humidity_pct: (Math.random() * 30 + 40).toFixed(1),
+                    irradiance_wm2: (Math.random() * 800 + 100).toFixed(0),
+                  }; } catch { setError('Invalid JSON'); setDvmIngesting(false); return; }
+                  const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dvm-ingest`;
+                  const res = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+                    body: JSON.stringify({ plant_config_id: selectedPlantId, user_id: user.id, gateway_mac: dvmIngestMac, interval_minutes: 15, sensor_data: sensorData, timestamp: new Date().toISOString() }),
+                  });
+                  if (!res.ok) throw new Error(`Ingest failed (${res.status})`);
+                  const result = await res.json();
+                  setSuccess(`Ingested: ${result.datapoints_created} datapoints, ${result.alerts?.length || 0} alerts. Event: ${result.event_id?.slice(0, 8)}…`);
+                  await loadData();
+                } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+                finally { setDvmIngesting(false); }
+              }} disabled={dvmIngesting || !selectedPlantId || !dvmIngestMac} className='px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center gap-2'>
+                {dvmIngesting ? <Loader2 className='w-4 h-4 animate-spin' /> : <Send className='w-4 h-4' />} Ingest via Gateway
+              </button>
+            </div>
+          </div>
+
+          {/* Create model */}
+          <div className='bg-white rounded-xl shadow p-6 max-w-4xl'>
+            <h2 className='text-xl font-bold text-gray-900 mb-2 flex items-center gap-2'><FlaskConical className='w-5 h-5 text-purple-600' /> Model Definition (YAML)</h2>
+            <p className='text-gray-600 mb-4 text-sm'>Define a calculation model with inputs, static inputs, and output expressions.</p>
+            <div className='space-y-3'>
+              <div className='grid grid-cols-2 gap-3'>
+                <div><label className='block text-sm font-medium text-gray-700 mb-1'>Model Name</label><input value={dvmModelName} onChange={e => setDvmModelName(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2' placeholder='Biochar CDR Model' /></div>
+                <div><label className='block text-sm font-medium text-gray-700 mb-1'>Plant</label>
+                <select value={selectedPlantId} onChange={e => setSelectedPlantId(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2'><option value=''>Select</option>{validatedPlants.map(p => <option key={p.id} value={p.id}>{p.plant_name}</option>)}</select></div>
+              </div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>YAML Definition</label>
+                <textarea value={dvmModelYaml} onChange={e => setDvmModelYaml(e.target.value)} rows={8} className='w-full border border-gray-300 rounded-lg px-4 py-2 font-mono text-xs' placeholder={'model:\n  name: Biochar CDR\n  inputs:\n    - id: biochar_mass, datapoint_type: biochar_mass\n  static_inputs:\n    - id: ef, value: 3.67\n  outputs:\n    - id: net_removal, expression: biochar_mass * ef'} />
+              </div>
+              <button onClick={async () => {
+                if (!user || !selectedPlantId || !dvmModelName || !dvmModelYaml) return;
+                setLoading(true); setError(''); setSuccess('');
+                try {
+                  const slug = dvmModelName.toLowerCase().replace(/\s+/g, '-');
+                  await supabase.from('dvm_models').insert({ plant_config_id: selectedPlantId, user_id: user.id, name: dvmModelName, slug, version: 1, yaml_definition: dvmModelYaml, is_active: true });
+                  setSuccess(`Model "${dvmModelName}" created.`); setDvmModelName(''); setDvmModelYaml(''); await loadData();
+                } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+                finally { setLoading(false); }
+              }} disabled={loading || !selectedPlantId || !dvmModelName} className='px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 font-medium flex items-center gap-2'>
+                {loading ? <Loader2 className='w-4 h-4 animate-spin' /> : <FlaskConical className='w-4 h-4' />} Create Model
+              </button>
+            </div>
+            {dvmModels.length > 0 && <div className='mt-4 space-y-2'><h3 className='text-sm font-semibold text-gray-700 mb-2'>Models</h3>{dvmModels.map(m => <div key={m.id} className='flex items-center justify-between p-3 bg-gray-50 rounded-lg'><div className='flex items-center gap-3'><FlaskConical className='w-4 h-4 text-purple-500' /><div><span className='font-medium text-sm'>{m.name}</span><span className='text-xs text-gray-500 ml-2'>v{m.version}</span></div></div><span className='text-xs text-gray-400'>{m.slug}</span></div>)}</div>}
+          </div>
+
+          {/* Run model */}
+          <div className='bg-white rounded-xl shadow p-6 max-w-4xl'>
+            <h2 className='text-xl font-bold text-gray-900 mb-2 flex items-center gap-2'><Layers className='w-5 h-5 text-green-600' /> Run Model</h2>
+            <div className='space-y-3'>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Select Model</label>
+                <select value={dvmRunModelId} onChange={e => setDvmRunModelId(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2'><option value=''>Select</option>{dvmModels.map(m => <option key={m.id} value={m.id}>{m.name} v{m.version}</option>)}</select>
+              </div>
+              <button onClick={async () => {
+                if (!user || !dvmRunModelId) return;
+                setLoading(true); setError(''); setSuccess('');
+                try {
+                  const now = new Date(); const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                  const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dvm-model-run`;
+                  const res = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+                    body: JSON.stringify({ model_id: dvmRunModelId, user_id: user.id, start_time: start.toISOString(), end_time: now.toISOString() }),
+                  });
+                  if (!res.ok) throw new Error(`Model run failed (${res.status})`);
+                  const result = await res.json();
+                  if (result.error) throw new Error(result.error);
+                  setSuccess(`Model run complete: ${result.datapoints_used} datapoints used. Outputs: ${JSON.stringify(result.outputs)}`);
+                  await loadData();
+                } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+                finally { setLoading(false); }
+              }} disabled={loading || !dvmRunModelId} className='px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium flex items-center gap-2'>
+                {loading ? <Loader2 className='w-4 h-4 animate-spin' /> : <Layers className='w-4 h-4' />} Run Model
+              </button>
+            </div>
+            {dvmModelRuns.length > 0 && <div className='mt-4 space-y-2'><h3 className='text-sm font-semibold text-gray-700 mb-2'>Recent Runs</h3>{dvmModelRuns.map(r => <div key={r.id} className='flex items-center justify-between p-3 bg-gray-50 rounded-lg'><div className='flex items-center gap-3'><Layers className='w-4 h-4 text-green-500' /><div><span className='font-medium text-sm'>{r.state}</span><span className='text-xs text-gray-500 ml-2'>{new Date(r.created_at).toLocaleString('en-IN')}</span></div></div><AuthBadge status={r.state === 'COMPLETE' ? 'authenticated' : r.state === 'FAILED' ? 'failed' : 'pending'} label={r.state} size='sm' /></div>)}</div>}
+          </div>
+
+          {/* Data rules */}
+          <div className='bg-white rounded-xl shadow p-6 max-w-4xl'>
+            <h2 className='text-xl font-bold text-gray-900 mb-2 flex items-center gap-2'><Bell className='w-5 h-5 text-amber-600' /> Data Quality Rules</h2>
+            <p className='text-gray-600 mb-4 text-sm'>Rules use VALUE, PREVIOUS_VALUE, AND, OR. Example: VALUE > 100</p>
+            <div className='grid grid-cols-3 gap-3'>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Rule Name</label><input value={dvmRuleName} onChange={e => setDvmRuleName(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2' placeholder='High temperature' /></div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Expression</label><input value={dvmRuleExpr} onChange={e => setDvmRuleExpr(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2' placeholder='VALUE > 80' /></div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Alert Message</label><input value={dvmRuleMsg} onChange={e => setDvmRuleMsg(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2' placeholder='Temperature exceeds threshold' /></div>
+            </div>
+            <button onClick={async () => {
+              if (!user || !selectedPlantId || !dvmRuleName || !dvmRuleExpr) return;
+              setLoading(true); setError(''); setSuccess('');
+              try {
+                await supabase.from('dvm_data_rules').insert({ plant_config_id: selectedPlantId, user_id: user.id, name: dvmRuleName, expression: dvmRuleExpr, action: 'ALERT', alert_message: dvmRuleMsg || dvmRuleName });
+                setSuccess(`Rule "${dvmRuleName}" created.`); setDvmRuleName(''); setDvmRuleExpr(''); setDvmRuleMsg(''); await loadData();
+              } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+              finally { setLoading(false); }
+            }} disabled={loading || !selectedPlantId || !dvmRuleName} className='mt-3 px-6 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 font-medium flex items-center gap-2'>
+              {loading ? <Loader2 className='w-4 h-4 animate-spin' /> : <Bell className='w-4 h-4' />} Create Rule
+            </button>
+            {dvmAlerts.length > 0 && <div className='mt-4 space-y-2'><h3 className='text-sm font-semibold text-gray-700 mb-2'>Active Alerts</h3>{dvmAlerts.map(a => <div key={a.id} className='flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg'><div className='flex items-center gap-3'><Bell className='w-4 h-4 text-red-500' /><span className='text-sm text-red-700'>{a.message}</span></div><span className='text-xs text-gray-400'>{new Date(a.created_at).toLocaleString('en-IN')}</span></div>)}</div>}
+          </div>
+
+          {/* Events + Ledgers summary */}
+          <div className='grid md:grid-cols-2 gap-4'>
+            <div className='bg-white rounded-xl shadow p-6'>
+              <h3 className='text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2'><Activity className='w-4 h-4 text-blue-500' /> Recent Events ({dvmEvents.length})</h3>
+              <div className='space-y-2 max-h-48 overflow-y-auto'>{dvmEvents.map(e => <div key={e.id} className='flex items-center justify-between p-2 bg-gray-50 rounded text-xs'><span className='text-gray-600'>{new Date(e.timestamp).toLocaleString('en-IN')}</span><span className='text-gray-400'>{e.id.slice(0, 8)}</span></div>)}{dvmEvents.length === 0 && <p className='text-sm text-gray-400'>No events yet</p>}</div>
+            </div>
+            <div className='bg-white rounded-xl shadow p-6'>
+              <h3 className='text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2'><Database className='w-4 h-4 text-teal-500' /> Ledgers ({dvmLedgers.length})</h3>
+              <div className='space-y-2'>{dvmLedgers.map(l => <div key={l.id} className='flex items-center justify-between p-2 bg-gray-50 rounded text-xs'><span className='font-medium text-gray-700'>{l.name}</span><span className='text-gray-500'>{l.balance} {l.unit}</span></div>)}{dvmLedgers.length === 0 && <p className='text-sm text-gray-400'>No ledgers yet</p>}</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
