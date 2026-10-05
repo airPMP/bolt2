@@ -358,10 +358,10 @@ export default function DeveloperDashboard() {
           {/* Data rules */}
           <div className='bg-white rounded-xl shadow p-6 max-w-4xl'>
             <h2 className='text-xl font-bold text-gray-900 mb-2 flex items-center gap-2'><Bell className='w-5 h-5 text-amber-600' /> Data Quality Rules</h2>
-            <p className='text-gray-600 mb-4 text-sm'>Rules use VALUE, PREVIOUS_VALUE, AND, OR. Example: VALUE > 100</p>
+            <p className='text-gray-600 mb-4 text-sm'>Rules use VALUE, PREVIOUS_VALUE, AND, OR. Example: VALUE {'>'} 100</p>
             <div className='grid grid-cols-3 gap-3'>
               <div><label className='block text-sm font-medium text-gray-700 mb-1'>Rule Name</label><input value={dvmRuleName} onChange={e => setDvmRuleName(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2' placeholder='High temperature' /></div>
-              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Expression</label><input value={dvmRuleExpr} onChange={e => setDvmRuleExpr(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2' placeholder='VALUE > 80' /></div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Expression</label><input value={dvmRuleExpr} onChange={e => setDvmRuleExpr(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2' placeholder={'VALUE > 80'} /></div>
               <div><label className='block text-sm font-medium text-gray-700 mb-1'>Alert Message</label><input value={dvmRuleMsg} onChange={e => setDvmRuleMsg(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2' placeholder='Temperature exceeds threshold' /></div>
             </div>
             <button onClick={async () => {

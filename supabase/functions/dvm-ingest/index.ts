@@ -16,6 +16,38 @@ function json(body: unknown, status = 200) {
   });
 }
 
+interface CIVVSensor {
+  sensor_id: string;
+  part_number?: string;
+  measurement: string;
+  value: number | string;
+  unit: string;
+  status?: string;
+  depth_cm?: number;
+}
+
+interface EpochPayload {
+  gateway_id?: string;
+  gateway_mac: string;
+  project_id?: string;
+  epoch_start?: string;
+  epoch_end?: string;
+  sensors?: CIVVSensor[];
+  hsm_signature?: string;
+  gateway_public_key_id?: string;
+}
+
+interface LegacyPayload {
+  plant_config_id: string;
+  user_id: string;
+  gateway_mac: string;
+  interval_minutes?: number;
+  sensor_data: Record<string, number | string>;
+  timestamp?: string;
+  hsm_signature?: string;
+  merkle_proof?: unknown;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -23,21 +55,60 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const {
-      plant_config_id,
-      user_id,
-      gateway_mac,
-      interval_minutes = 15,
-      event_type_slug = "sensor-interval",
-      event_type_name = "Sensor Interval",
-      timestamp,
-      sensor_data,
-      hsm_signature,
-      merkle_proof,
-    } = body;
 
-    if (!plant_config_id || !user_id || !gateway_mac || !sensor_data) {
-      return json({ error: "Missing required fields: plant_config_id, user_id, gateway_mac, sensor_data" }, 400);
+    // Detect format: CIVV epoch (sensors array) vs legacy (sensor_data flat object)
+    const isEpoch = Array.isArray(body.sensors);
+    let plant_config_id: string;
+    let user_id: string;
+    let gateway_mac: string;
+    let timestamp: string;
+    let interval_minutes: number;
+    let hsm_signature: string | undefined;
+    let measurements: { slug: string; value: number | string; unit: string; part_number?: string; sensor_id?: string }[];
+
+    if (isEpoch) {
+      const epoch = body as EpochPayload;
+      plant_config_id = body.plant_config_id || body.project_id || "";
+      user_id = body.user_id || "";
+      gateway_mac = epoch.gateway_mac;
+      timestamp = epoch.epoch_start || new Date().toISOString();
+      interval_minutes = body.interval_minutes || 15;
+      hsm_signature = epoch.hsm_signature;
+      measurements = epoch.sensors!.map(s => ({
+        slug: s.measurement,
+        value: s.value,
+        unit: s.unit,
+        part_number: s.part_number,
+        sensor_id: s.sensor_id,
+      }));
+    } else {
+      const legacy = body as LegacyPayload;
+      plant_config_id = legacy.plant_config_id;
+      user_id = legacy.user_id;
+      gateway_mac = legacy.gateway_mac;
+      timestamp = legacy.timestamp || new Date().toISOString();
+      interval_minutes = legacy.interval_minutes || 15;
+      hsm_signature = legacy.hsm_signature;
+      measurements = Object.entries(legacy.sensor_data).map(([slug, value]) => ({
+        slug,
+        value,
+        unit: "",
+      }));
+    }
+
+    if (!plant_config_id || !gateway_mac || measurements.length === 0) {
+      return json({ error: "Missing required fields. Need plant_config_id/project_id, gateway_mac, and sensors[] or sensor_data" }, 400);
+    }
+
+    // If user_id not provided, try to get it from the plant config
+    if (!user_id) {
+      const pcRes = await fetch(
+        `${supabaseUrl}/rest/v1/plant_configs?id=eq.${plant_config_id}&select=developer_id,auditor_id&limit=1`,
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } }
+      );
+      const pcJson = await pcRes.json();
+      user_id = pcJson[0]?.developer_id || pcJson[0]?.auditor_id || "";
+      if (!user_id) return json({ error: "Could not determine user_id from plant_config" }, 400);
     }
 
     const headers = {
@@ -45,6 +116,9 @@ Deno.serve(async (req: Request) => {
       Authorization: `Bearer ${serviceRoleKey}`,
       apikey: serviceRoleKey,
     };
+
+    const event_type_slug = isEpoch ? "civv-epoch" : "sensor-interval";
+    const event_type_name = isEpoch ? "CIVV Sensor Epoch" : "Sensor Interval";
 
     // 1. Find or create event type
     let eventTypeRes = await fetch(
@@ -71,6 +145,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // 2. Create event
+    const eventTs = isEpoch ? (body as EpochPayload).epoch_start || timestamp : timestamp;
     const eventRes = await fetch(`${supabaseUrl}/rest/v1/dvm_events`, {
       method: "POST",
       headers: { ...headers, "Prefer": "return=representation" },
@@ -78,21 +153,34 @@ Deno.serve(async (req: Request) => {
         event_type_id: eventTypeId,
         plant_config_id,
         user_id,
-        timestamp: timestamp || new Date().toISOString(),
-        metadata: { interval_minutes, gateway_mac },
+        timestamp: eventTs,
+        metadata: {
+          interval_minutes,
+          gateway_mac,
+          epoch_end: isEpoch ? (body as EpochPayload).epoch_end : undefined,
+          gateway_id: isEpoch ? (body as EpochPayload).gateway_id : undefined,
+          gateway_public_key_id: isEpoch ? (body as EpochPayload).gateway_public_key_id : undefined,
+        },
       }),
     });
     const eventRows = await eventRes.json();
     const eventId = eventRows[0].id;
 
-    // 3. Create datapoints for each sensor reading
+    // 3. Fetch data rules ONCE (not per sensor)
+    const rulesRes = await fetch(
+      `${supabaseUrl}/rest/v1/dvm_data_rules?plant_config_id=eq.${plant_config_id}&is_active=eq.true&select=id,name,expression,alert_message,action,user_id`,
+      { headers }
+    );
+    const rules = await rulesRes.json();
+
+    // 4. Create datapoints for each sensor measurement
     const datapointIds: string[] = [];
     const alerts: string[] = [];
 
-    for (const [key, value] of Object.entries(sensor_data)) {
+    for (const m of measurements) {
       // Find or create datapoint type
       let dpTypeRes = await fetch(
-        `${supabaseUrl}/rest/v1/dvm_datapoint_types?event_type_id=eq.${eventTypeId}&slug=eq.${key}&select=id&limit=1`,
+        `${supabaseUrl}/rest/v1/dvm_datapoint_types?event_type_id=eq.${eventTypeId}&slug=eq.${m.slug}&select=id&limit=1`,
         { headers }
       );
       let dpTypeJson = await dpTypeRes.json();
@@ -104,9 +192,9 @@ Deno.serve(async (req: Request) => {
           headers: { ...headers, "Prefer": "return=representation" },
           body: JSON.stringify({
             event_type_id: eventTypeId,
-            name: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-            slug: key,
-            unit: "",
+            name: m.slug.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            slug: m.slug,
+            unit: m.unit || "",
             data_type: "NUMERIC",
           }),
         });
@@ -114,7 +202,7 @@ Deno.serve(async (req: Request) => {
         dpTypeId = dptRows[0].id;
       }
 
-      const numericVal = typeof value === "number" ? value : parseFloat(String(value));
+      const numericVal = typeof m.value === "number" ? m.value : parseFloat(String(m.value));
       const dpRes = await fetch(`${supabaseUrl}/rest/v1/dvm_datapoints`, {
         method: "POST",
         headers: { ...headers, "Prefer": "return=representation" },
@@ -122,32 +210,24 @@ Deno.serve(async (req: Request) => {
           event_id: eventId,
           datapoint_type_id: dpTypeId,
           numeric_value: isNaN(numericVal) ? null : numericVal,
-          text_value: isNaN(numericVal) ? String(value) : null,
-          unit: "",
+          text_value: isNaN(numericVal) ? String(m.value) : null,
+          unit: m.unit || "",
           hsm_signature: hsm_signature || null,
           gateway_mac,
-          merkle_proof: merkle_proof || null,
-          captured_at: timestamp || new Date().toISOString(),
+          captured_at: eventTs,
         }),
       });
       const dpRows = await dpRes.json();
       if (dpRows[0]?.id) datapointIds.push(dpRows[0].id);
 
-      // 4. Evaluate data rules for this value
-      const rulesRes = await fetch(
-        `${supabaseUrl}/rest/v1/dvm_data_rules?plant_config_id=eq.${plant_config_id}&is_active=eq.true&select=id,expression,alert_message,action,user_id`,
-        { headers }
-      );
-      const rules = await rulesRes.json();
-
+      // 5. Evaluate data rules for this value
       for (const rule of rules) {
         try {
           const expr = rule.expression
             .replace(/VALUE/g, String(numericVal))
             .replace(/PREVIOUS_VALUE/g, "0")
-            .replace(/AND/g, "&&")
-            .replace(/OR/g, "||");
-          // eslint-disable-next-line no-new-func
+            .replace(/\bAND\b/g, "&&")
+            .replace(/\bOR\b/g, "||");
           const triggered = Function(`"use strict"; return (${expr});`)();
           if (triggered) {
             await fetch(`${supabaseUrl}/rest/v1/dvm_rule_results`, {
@@ -158,10 +238,10 @@ Deno.serve(async (req: Request) => {
                 user_id: rule.user_id,
                 target_type: "DATAPOINT",
                 target_id: dpRows[0]?.id || null,
-                message: rule.alert_message || `Rule "${rule.name}" triggered for ${key}=${numericVal}`,
+                message: rule.alert_message || `Rule "${rule.name}" triggered for ${m.slug}=${numericVal}`,
               }),
             });
-            alerts.push(`${key}=${numericVal} triggered rule: ${rule.name}`);
+            alerts.push(`${m.slug}=${numericVal} triggered: ${rule.name}`);
           }
         } catch {
           // skip rule eval errors
@@ -171,11 +251,13 @@ Deno.serve(async (req: Request) => {
 
     return json({
       status: "ingested",
+      format: isEpoch ? "civv-epoch" : "legacy",
       event_id: eventId,
       datapoints_created: datapointIds.length,
       datapoint_ids: datapointIds,
       alerts,
-      timestamp: timestamp || new Date().toISOString(),
+      epoch_start: eventTs,
+      gateway_mac,
     });
   } catch (err) {
     return json({ error: err instanceof Error ? err.message : "Unknown error" }, 500);

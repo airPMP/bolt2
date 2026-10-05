@@ -30,3 +30,6 @@ verify_jwt = false
 
 [functions.dvm-model-run]
 verify_jwt = false
+
+[functions.dvm-registry-issue]
+verify_jwt = false
