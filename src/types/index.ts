@@ -288,6 +288,50 @@ export type MizanDispatchStatus = 'PENDING' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'F
 export type MizanTokenClass = 'BLACK' | 'GREEN';
 export type MizanTokenStatus = 'MINTED' | 'SETTLED' | 'TRANSFERRED' | 'RETIRED';
 
+// ============================================================
+// CBAM (EU Carbon Border Adjustment Mechanism)
+// ============================================================
+
+export type CbamSector = 'CEMENT' | 'FERTILISERS' | 'IRON_STEEL' | 'ALUMINIUM' | 'HYDROGEN';
+export type CbamReportStatus = 'DRAFT' | 'SUBMITTED' | 'VERIFIED' | 'REJECTED';
+
+export interface CbamCnCode {
+  id: string;
+  cn_code: string;
+  sector: CbamSector;
+  description: string;
+  direct_emissions_tco2e_per_t: number | null;
+  indirect_emissions_tco2e_per_t: number | null;
+  total_emissions_tco2e_per_t: number | null;
+  production_route: string | null;
+  benchmark_column_a: number | null;
+  benchmark_column_b: number | null;
+  cbam_factor_2026: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CbamDeclarantReport {
+  id: string;
+  user_id: string;
+  plant_config_id: string | null;
+  installation_id: string;
+  declarant_id: string | null;
+  importing_company: string | null;
+  reporting_period: string;
+  submission_date: string | null;
+  goods: Json;
+  precursors: Json;
+  total_chargeable_tco2e: number;
+  total_cbam_cost_eur: number;
+  certificate_price_eur: number;
+  provenance: Json;
+  verification: Json;
+  submission_channel: Json;
+  status: CbamReportStatus;
+  created_at: string;
+}
+
 export interface MizanCivvRecord {
   id: string;
   plant_config_id: string | null;

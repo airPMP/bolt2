@@ -36,3 +36,6 @@ verify_jwt = false
 
 [functions.dvm-mizan-civv]
 verify_jwt = false
+
+[functions.dvm-cbam-report]
+verify_jwt = false

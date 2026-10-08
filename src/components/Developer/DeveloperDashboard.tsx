@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Building2, Send, Coins, TrendingUp, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Zap, Clock, Database, Wifi, FileText, Activity, Layers, FlaskConical, Bell, Globe, Flame, Leaf, ShieldCheck } from 'lucide-react';
+import { Building2, Send, Coins, TrendingUp, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, FingerprintPattern as Fingerprint, Zap, Clock, Database, Wifi, FileText, Activity, Layers, FlaskConical, Bell, Globe, Flame, Leaf, ShieldCheck, Euro, Factory } from 'lucide-react';
 import ESGDashboard from '../Shared/ESGDashboard';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,9 +8,9 @@ import { EXCHANGES } from '../../data/exchanges';
 import CredentialTester from '../Shared/CredentialTester';
 import AuthBadge from '../Shared/AuthBadge';
 import AuthStampPanel from '../Shared/AuthStampPanel';
-import type { AuthStamp, PlantConfig, PersonaCredential, DataSubmission, TokenMint, ExchangeListing, Wallet, ProjectStatus, DvmModel, DvmModelRun, DvmEvent, DvmRuleResult, DvmLedger, MizanCivvRecord, MizanToken } from '../../types';
+import type { AuthStamp, PlantConfig, PersonaCredential, DataSubmission, TokenMint, ExchangeListing, Wallet, ProjectStatus, DvmModel, DvmModelRun, DvmEvent, DvmRuleResult, DvmLedger, MizanCivvRecord, MizanToken, CbamCnCode, CbamDeclarantReport } from '../../types';
 
-type DevTab = 'overview' | 'credentials' | 'submit' | 'mint' | 'exchange' | 'wallet' | 'esg' | 'dvm' | 'mizan';
+type DevTab = 'overview' | 'credentials' | 'submit' | 'mint' | 'exchange' | 'wallet' | 'esg' | 'dvm' | 'mizan' | 'cbam';
 
 export default function DeveloperDashboard() {
   const { user } = useAuth();
@@ -55,6 +55,20 @@ export default function DeveloperDashboard() {
   const [mizanStackTemp, setMizanStackTemp] = useState(420.15);
   const [mizanCcsRecovery, setMizanCcsRecovery] = useState(4.0);
   const [mizanProcessing, setMizanProcessing] = useState(false);
+  const [cbamCnCodes, setCbamCnCodes] = useState<CbamCnCode[]>([]);
+  const [cbamReports, setCbamReports] = useState<CbamDeclarantReport[]>([]);
+  const [cbamSector, setCbamSector] = useState('CEMENT');
+  const [cbamCnCode, setCbamCnCode] = useState('');
+  const [cbamActivityLevel, setCbamActivityLevel] = useState(45000);
+  const [cbamDirectEm, setCbamDirectEm] = useState<number | ''>('');
+  const [cbamIndirectEm, setCbamIndirectEm] = useState<number | ''>('');
+  const [cbamRoute, setCbamRoute] = useState('A');
+  const [cbamInstallationId, setCbamInstallationId] = useState('CBAM-IN-2026-0042');
+  const [cbamDeclarantId, setCbamDeclarantId] = useState('DE-CBAM-2026-0089');
+  const [cbamImportingCo, setCbamImportingCo] = useState('ThyssenKrupp AG');
+  const [cbamPeriod, setCbamPeriod] = useState('2026-Q3');
+  const [cbamCertPrice, setCbamCertPrice] = useState(75.28);
+  const [cbamGenerating, setCbamGenerating] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -93,6 +107,12 @@ export default function DeveloperDashboard() {
       ]);
       if (mizanRecs.data) setMizanRecords(mizanRecs.data);
       if (mizanToks.data) setMizanTokens(mizanToks.data);
+      const [cbamCodes, cbamReps] = await Promise.all([
+        supabase.from('cbam_cn_codes').select('*').order('sector', { ascending: true }).order('cn_code', { ascending: true }),
+        supabase.from('cbam_declarant_reports').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+      ]);
+      if (cbamCodes.data) setCbamCnCodes(cbamCodes.data);
+      if (cbamReps.data) setCbamReports(cbamReps.data);
     }
   }, [user]);
 
@@ -165,6 +185,7 @@ export default function DeveloperDashboard() {
     { id: 'esg', label: 'ESG Reporting', icon: FileText },
     { id: 'dvm', label: 'dMRV Data Model', icon: Activity },
     { id: 'mizan', label: 'Mizan CIVV', icon: Globe },
+    { id: 'cbam', label: 'CBAM Reports', icon: Euro },
   ];
 
   return (
@@ -508,6 +529,139 @@ export default function DeveloperDashboard() {
                 </div>
               ))}
               {mizanRecords.length === 0 && <p className='text-sm text-gray-400'>No CIVV records yet</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'cbam' && (
+        <div className='space-y-6'>
+          {/* CBAM Declarant Report Generator */}
+          <div className='bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow p-6 max-w-4xl border border-blue-200'>
+            <div className='flex items-center gap-3 mb-2'>
+              <Euro className='w-6 h-6 text-blue-700' />
+              <h2 className='text-xl font-bold text-gray-900'>CBAM Declarant Report</h2>
+              <span className='px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full font-medium'>EU CBAM 2026</span>
+            </div>
+            <p className='text-gray-700 mb-4 text-sm'>Generate EU CBAM declarant reports with SEE, SEFA threshold, and chargeable emissions computation per CN code. Formula: Chargeable = max(0, SEE - SEFA) where SEFA = Benchmark × 0.975.</p>
+
+            <div className='grid grid-cols-2 gap-4 mb-4'>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Installation ID</label><input value={cbamInstallationId} onChange={e => setCbamInstallationId(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm' placeholder='CBAM-IN-2026-0042' /></div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Declarant ID</label><input value={cbamDeclarantId} onChange={e => setCbamDeclarantId(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm' placeholder='DE-CBAM-2026-0089' /></div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Importing Company</label><input value={cbamImportingCo} onChange={e => setCbamImportingCo(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm' placeholder='ThyssenKrupp AG' /></div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Reporting Period</label><input value={cbamPeriod} onChange={e => setCbamPeriod(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm' placeholder='2026-Q3' /></div>
+            </div>
+
+            <div className='bg-white rounded-lg p-4 border border-gray-200 mb-4'>
+              <h3 className='text-sm font-semibold text-gray-700 mb-3'>Goods (CN Code Selection)</h3>
+              <div className='grid grid-cols-3 gap-4'>
+                <div><label className='block text-xs text-gray-500 mb-1'>Sector</label>
+                  <select value={cbamSector} onChange={e => { setCbamSector(e.target.value); setCbamCnCode(''); }} className='w-full border border-gray-300 rounded-lg px-3 py-2 text-sm'>
+                    <option>CEMENT</option><option>FERTILISERS</option><option>IRON_STEEL</option><option>ALUMINIUM</option><option>HYDROGEN</option>
+                  </select>
+                </div>
+                <div><label className='block text-xs text-gray-500 mb-1'>CN Code</label>
+                  <select value={cbamCnCode} onChange={e => { const c = cbamCnCodes.find(cc => cc.cn_code === e.target.value); setCbamCnCode(e.target.value); if (c) { setCbamRoute(c.production_route || 'A'); } }} className='w-full border border-gray-300 rounded-lg px-3 py-2 text-sm'>
+                    <option value=''>Select CN code</option>
+                    {cbamCnCodes.filter(c => c.sector === cbamSector).map(c => <option key={c.id} value={c.cn_code}>{c.cn_code} — {c.description}</option>)}
+                  </select>
+                </div>
+                <div><label className='block text-xs text-gray-500 mb-1'>Production Route</label>
+                  <select value={cbamRoute} onChange={e => setCbamRoute(e.target.value)} className='w-full border border-gray-300 rounded-lg px-3 py-2 text-sm'>
+                    <option value='A'>A</option><option value='B'>B</option><option value='K'>K (Primary)</option><option value='L'>L (Secondary)</option>
+                  </select>
+                </div>
+                <div><label className='block text-xs text-gray-500 mb-1'>Activity Level (tonnes)</label><input type='number' value={cbamActivityLevel} onChange={e => setCbamActivityLevel(Number(e.target.value))} className='w-full border border-gray-300 rounded-lg px-3 py-2 text-sm' /></div>
+                <div><label className='block text-xs text-gray-500 mb-1'>Direct Emissions (tCO2e) — optional</label><input type='number' value={cbamDirectEm} onChange={e => setCbamDirectEm(e.target.value === '' ? '' : Number(e.target.value))} className='w-full border border-gray-300 rounded-lg px-3 py-2 text-sm' placeholder='Auto from defaults' /></div>
+                <div><label className='block text-xs text-gray-500 mb-1'>Indirect Emissions (tCO2e) — optional</label><input type='number' value={cbamIndirectEm} onChange={e => setCbamIndirectEm(e.target.value === '' ? '' : Number(e.target.value))} className='w-full border border-gray-300 rounded-lg px-3 py-2 text-sm' placeholder='Auto from defaults' /></div>
+              </div>
+            </div>
+
+            {/* Live SEE/SEFA preview */}
+            {cbamCnCode && (() => {
+              const cn = cbamCnCodes.find(c => c.cn_code === cbamCnCode);
+              if (!cn) return null;
+              const direct = cbamDirectEm !== '' ? Number(cbamDirectEm) : (cn.direct_emissions_tco2e_per_t ? Number(cn.direct_emissions_tco2e_per_t) * cbamActivityLevel : 0);
+              const indirect = cbamIndirectEm !== '' ? Number(cbamIndirectEm) : (cn.indirect_emissions_tco2e_per_t ? Number(cn.indirect_emissions_tco2e_per_t) * cbamActivityLevel : 0);
+              const see = (direct + indirect) / cbamActivityLevel;
+              const benchB = cn.benchmark_column_b || cn.total_emissions_tco2e_per_t || see;
+              const sefa = Number(benchB) * 0.975;
+              const chargeable = Math.max(0, see - sefa);
+              const cost = chargeable * cbamActivityLevel * cbamCertPrice;
+              return (
+                <div className='grid grid-cols-4 gap-3 mb-4'>
+                  <div className='bg-blue-50 border border-blue-200 rounded-lg p-3 text-center'><div className='text-xs text-blue-600'>SEE</div><div className='text-lg font-bold text-blue-700'>{see.toFixed(4)}</div><div className='text-xs text-gray-400'>tCO2e/t</div></div>
+                  <div className='bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-center'><div className='text-xs text-indigo-600'>SEFA (2026)</div><div className='text-lg font-bold text-indigo-700'>{sefa.toFixed(4)}</div><div className='text-xs text-gray-400'>tCO2e/t</div></div>
+                  <div className='bg-amber-50 border border-amber-200 rounded-lg p-3 text-center'><div className='text-xs text-amber-600'>Chargeable</div><div className='text-lg font-bold text-amber-700'>{(chargeable * cbamActivityLevel).toFixed(2)}</div><div className='text-xs text-gray-400'>tCO2e total</div></div>
+                  <div className='bg-red-50 border border-red-200 rounded-lg p-3 text-center'><Euro className='w-4 h-4 text-red-500 mx-auto mb-0.5' /><div className='text-lg font-bold text-red-700'>{cost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div><div className='text-xs text-gray-400'>EUR cost</div></div>
+                </div>
+              );
+            })()}
+
+            <div className='grid grid-cols-2 gap-4 mb-4'>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Certificate Price (EUR/tCO2e)</label><input type='number' step='0.01' value={cbamCertPrice} onChange={e => setCbamCertPrice(Number(e.target.value))} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm' /></div>
+              <div><label className='block text-sm font-medium text-gray-700 mb-1'>Plant (optional)</label>
+                <select value={selectedPlantId} onChange={e => setSelectedPlantId(e.target.value)} className='w-full border border-gray-300 rounded-lg px-4 py-2 text-sm'><option value=''>None</option>{validatedPlants.map(p => <option key={p.id} value={p.id}>{p.plant_name}</option>)}</select>
+              </div>
+            </div>
+
+            <button onClick={async () => {
+              if (!user || !cbamCnCode || !cbamInstallationId || !cbamPeriod) return;
+              setCbamGenerating(true); setError(''); setSuccess('');
+              try {
+                const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dvm-cbam-report`;
+                const goods: { cn_code: string; activity_level_tonnes: number; production_route: string; direct_emissions_tco2e?: number; indirect_emissions_tco2e?: number }[] = [{ cn_code: cbamCnCode, activity_level_tonnes: cbamActivityLevel, production_route: cbamRoute }];
+                if (cbamDirectEm !== '') goods[0].direct_emissions_tco2e = Number(cbamDirectEm);
+                if (cbamIndirectEm !== '') goods[0].indirect_emissions_tco2e = Number(cbamIndirectEm);
+                const res = await fetch(apiUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+                  body: JSON.stringify({ user_id: user.id, plant_config_id: selectedPlantId || null, installation_id: cbamInstallationId, declarant_id: cbamDeclarantId, importing_company: cbamImportingCo, reporting_period: cbamPeriod, certificate_price_eur: cbamCertPrice, verification: { verifier_name: 'TUV_SUD', verifier_accreditation: 'ESYD-874-9', verification_report_id: `VR-CBAM-${Date.now().toString(36).toUpperCase()}` }, submission_channel: { portal: 'DEHSt', partner: 'CBR_PARTNERS_GERMANY' }, goods }),
+                });
+                if (!res.ok) throw new Error(`CBAM report failed (${res.status})`);
+                const result = await res.json();
+                if (result.error) throw new Error(result.error);
+                setSuccess(`Report generated: ${result.report_id}. Total chargeable: ${result.total_chargeable_tco2e} tCO2e. CBAM cost: EUR ${result.total_cbam_cost_eur.toLocaleString('en-IN')}.`);
+                await loadData();
+              } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+              finally { setCbamGenerating(false); }
+            }} disabled={cbamGenerating || !cbamCnCode || !cbamInstallationId || !user} className='px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center gap-2'>
+              {cbamGenerating ? <Loader2 className='w-4 h-4 animate-spin' /> : <Euro className='w-4 h-4' />} Generate CBAM Report
+            </button>
+          </div>
+
+          {/* Recent reports */}
+          <div className='bg-white rounded-xl shadow p-6 max-w-4xl'>
+            <h3 className='text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2'><Factory className='w-4 h-4 text-blue-500' /> Recent CBAM Reports</h3>
+            <div className='space-y-2 max-h-64 overflow-y-auto'>
+              {cbamReports.map(r => (
+                <div key={r.id} className='flex items-center justify-between p-3 bg-gray-50 rounded-lg text-xs'>
+                  <div className='flex items-center gap-3'>
+                    <Euro className='w-4 h-4 text-blue-500' />
+                    <div>
+                      <div className='font-medium text-gray-700'>{r.installation_id} — {r.reporting_period}</div>
+                      <div className='text-gray-400'>{r.importing_company} | Chargeable: {Number(r.total_chargeable_tco2e).toFixed(1)} tCO2e | Cost: EUR {Number(r.total_cbam_cost_eur).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-xs ${r.status === 'VERIFIED' ? 'bg-emerald-100 text-emerald-700' : r.status === 'SUBMITTED' ? 'bg-blue-100 text-blue-700' : r.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{r.status}</span>
+                </div>
+              ))}
+              {cbamReports.length === 0 && <p className='text-sm text-gray-400'>No CBAM reports yet</p>}
+            </div>
+          </div>
+
+          {/* CN Code reference browser */}
+          <div className='bg-white rounded-xl shadow p-6 max-w-4xl'>
+            <h3 className='text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2'><Database className='w-4 h-4 text-indigo-500' /> CBAM CN Code Reference ({cbamCnCodes.length} codes)</h3>
+            <div className='overflow-x-auto'>
+              <table className='w-full text-xs'>
+                <thead><tr className='border-b border-gray-200'><th className='text-left py-2 px-2 font-semibold text-gray-600'>CN Code</th><th className='text-left py-2 px-2 font-semibold text-gray-600'>Sector</th><th className='text-left py-2 px-2 font-semibold text-gray-600'>Description</th><th className='text-right py-2 px-2 font-semibold text-gray-600'>Direct</th><th className='text-right py-2 px-2 font-semibold text-gray-600'>Indirect</th><th className='text-center py-2 px-2 font-semibold text-gray-600'>Route</th></tr></thead>
+                <tbody>
+                  {cbamCnCodes.slice(0, 30).map(c => (
+                    <tr key={c.id} className='border-b border-gray-100 hover:bg-gray-50'><td className='py-1.5 px-2 font-mono'>{c.cn_code}</td><td className='py-1.5 px-2'><span className={`px-1.5 py-0.5 rounded text-xs ${c.sector === 'CEMENT' ? 'bg-stone-100 text-stone-700' : c.sector === 'FERTILISERS' ? 'bg-green-100 text-green-700' : c.sector === 'IRON_STEEL' ? 'bg-gray-200 text-gray-700' : c.sector === 'ALUMINIUM' ? 'bg-slate-100 text-slate-700' : 'bg-cyan-100 text-cyan-700'}`}>{c.sector}</span></td><td className='py-1.5 px-2 text-gray-600'>{c.description}</td><td className='py-1.5 px-2 text-right'>{c.direct_emissions_tco2e_per_t || '—'}</td><td className='py-1.5 px-2 text-right'>{c.indirect_emissions_tco2e_per_t || '—'}</td><td className='py-1.5 px-2 text-center'>{c.production_route || '—'}</td></tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
