@@ -332,6 +332,194 @@ export interface CbamDeclarantReport {
   created_at: string;
 }
 
+// ============================================================
+// Platform Foundation (PLAT-01, PLAT-03, PLAT-04, CIVV-01, CIVV-03, A6-01, A6-03, GOV-01)
+// ============================================================
+
+export type OrgType = 'developer' | 'operator' | 'vvb' | 'buyer' | 'registry' | 'admin';
+export type MemberRole = 'owner' | 'admin' | 'manager' | 'operator' | 'viewer';
+export type SiteType = 'industrial' | 'agricultural' | 'forest' | 'energy' | 'coastal' | 'other';
+export type EquipmentType = 'gateway' | 'sensor' | 'meter' | 'analyser' | 'weighbridge' | 'weather_station' | 'other';
+export type EquipmentStatus = 'commissioned' | 'active' | 'maintenance' | 'decommissioned' | 'faulty';
+export type WorkflowAction = 'create' | 'update' | 'delete' | 'correct';
+export type FeatureStatus = 'implemented' | 'in_progress' | 'planned' | 'not_started' | 'deprecated';
+export type BacklogPriority = 'P0' | 'P1' | 'P2' | 'P3';
+export type A6MethodologyStatus = 'draft' | 'active' | 'superseded' | 'retired';
+
+export interface Organization {
+  id: string;
+  name: string;
+  org_type: OrgType;
+  country: string | null;
+  jurisdiction: string | null;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  role: MemberRole;
+  invited_by: string | null;
+  joined_at: string;
+}
+
+export interface Site {
+  id: string;
+  organization_id: string;
+  project_id: string | null;
+  name: string;
+  site_type: SiteType | null;
+  boundary_geojson: Json;
+  country: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Equipment {
+  id: string;
+  site_id: string | null;
+  organization_id: string;
+  device_type: EquipmentType;
+  model: string;
+  manufacturer: string | null;
+  serial_number: string | null;
+  part_number: string | null;
+  firmware_version: string | null;
+  interface_type: string | null;
+  commissioning_date: string | null;
+  decommissioning_date: string | null;
+  custodian: string | null;
+  status: EquipmentStatus;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EquipmentCalibration {
+  id: string;
+  equipment_id: string;
+  serial_number: string | null;
+  range_min: number | null;
+  range_max: number | null;
+  accuracy: string | null;
+  calibration_certificate: string | null;
+  calibrated_at: string | null;
+  next_calibration_due: string | null;
+  drift_check_value: number | null;
+  last_drift_check: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface WorkflowStage {
+  id: string;
+  name: string;
+  display_name: string;
+  stage_order: number;
+  is_terminal: boolean;
+  allowed_transitions: string[];
+  created_at: string;
+}
+
+export interface WorkflowEvent {
+  id: string;
+  project_id: string | null;
+  organization_id: string | null;
+  from_stage: string | null;
+  to_stage: string;
+  actor_id: string | null;
+  reason: string | null;
+  evidence_ref: string | null;
+  metadata: Json;
+  created_at: string;
+}
+
+export interface AuditTrailEntry {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: WorkflowAction;
+  actor_id: string | null;
+  previous_state: Json | null;
+  new_state: Json | null;
+  reason: string | null;
+  authority: string | null;
+  superseded_by: string | null;
+  created_at: string;
+}
+
+export interface A6Methodology {
+  id: string;
+  programme: string;
+  activity_applicability: string;
+  methodology_id: string;
+  version: string;
+  effective_date: string;
+  source_documents: Json;
+  formulas: Json;
+  parameters: Json;
+  required_evidence: Json;
+  monitoring_frequency: string | null;
+  status: A6MethodologyStatus;
+  superseded_by: string | null;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface A6Parameter {
+  id: string;
+  methodology_id: string | null;
+  parameter_name: string;
+  source: string | null;
+  owner: string | null;
+  unit: string | null;
+  valid_range_min: number | null;
+  valid_range_max: number | null;
+  collection_frequency: string | null;
+  method_version: string | null;
+  current_value: number | null;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface A6ParameterHistory {
+  id: string;
+  parameter_id: string;
+  old_value: number | null;
+  new_value: number | null;
+  reason: string | null;
+  changed_by: string | null;
+  affected_methods: Json;
+  impact_report: string | null;
+  created_at: string;
+}
+
+export interface FeatureTruthLedgerEntry {
+  id: string;
+  feature_id: string;
+  feature_name: string;
+  backlog_area: string;
+  priority: BacklogPriority;
+  status: FeatureStatus;
+  evidence_link: string | null;
+  product_owner: string | null;
+  last_test_date: string | null;
+  limitations: string | null;
+  approved_wording: string | null;
+  dependencies: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MizanCivvRecord {
   id: string;
   plant_config_id: string | null;

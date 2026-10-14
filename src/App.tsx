@@ -5,6 +5,7 @@ import AuditorDashboard from './components/Auditor/AuditorDashboard';
 import DeveloperDashboard from './components/Developer/DeveloperDashboard';
 import BuyerDashboard from './components/Buyer/BuyerDashboard';
 import CommunityDashboard from './components/Community/CommunityDashboard';
+import PlatformFoundation from './components/Shared/PlatformFoundation';
 
 function AppContent() {
   const { user, userProfile, loading } = useAuth();
@@ -25,6 +26,7 @@ function AppContent() {
         {userProfile.user_type === 'developer' && <DeveloperDashboard />}
         {userProfile.user_type === 'buyer' && <BuyerDashboard />}
         {userProfile.user_type === 'community' && <CommunityDashboard />}
+        <PlatformFoundation />
       </div></main>
     </div>
   );
